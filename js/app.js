@@ -24,6 +24,17 @@
         });
     });
 
+    // 홈 탭의 탐색 분류 카드 → 해당 알고리즘 탭으로 이동
+    document.querySelectorAll('[data-goto]').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            var target = document.querySelector('.tab-btn[data-tab="' + link.dataset.goto + '"]');
+            if (!target || target.classList.contains('disabled')) return;
+            activate(link.dataset.goto);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
     document.querySelectorAll('[data-accordion-trigger]').forEach(function (trigger) {
         trigger.addEventListener('click', function () {
             if (trigger.disabled) return;
@@ -31,7 +42,11 @@
         });
     });
 
+    // 탭 통합 이전에 배포된 #dfs, #bfs 링크도 통합 탭으로 연결
+    var LEGACY_TABS = { dfs: 'dfs-bfs', bfs: 'dfs-bfs' };
+
     var initial = (location.hash || '').replace('#', '');
+    if (LEGACY_TABS[initial]) initial = LEGACY_TABS[initial];
     var initialBtn = document.querySelector('.tab-btn[data-tab="' + initial + '"]');
     if (initialBtn && !initialBtn.classList.contains('disabled')) {
         activate(initial);

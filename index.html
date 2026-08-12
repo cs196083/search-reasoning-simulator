@@ -15,8 +15,7 @@
 <nav class="tab-nav">
     <button class="tab-btn" data-tab="home">홈</button>
     <button class="tab-btn" data-tab="search-tree">탐색 트리</button>
-    <button class="tab-btn" data-tab="dfs">깊이 우선 탐색</button>
-    <button class="tab-btn" data-tab="bfs">너비 우선 탐색</button>
+    <button class="tab-btn" data-tab="dfs-bfs">깊이 우선 탐색 &amp; 너비 우선 탐색</button>
     <button class="tab-btn disabled" data-tab="hill">언덕 등반 탐색<span class="soon-badge">준비중</span></button>
     <button class="tab-btn disabled" data-tab="best">최상 우선 탐색<span class="soon-badge">준비중</span></button>
     <button class="tab-btn disabled" data-tab="astar">A* 알고리즘<span class="soon-badge">준비중</span></button>
@@ -32,6 +31,59 @@
             <h2>탐색과 추론 시뮬레이터</h2>
             <p>이 사이트는 부산동성고등학교 「인공지능 기초」 수업에서 배우는 탐색 알고리즘과 추론 과정을 직접 실행해보며 눈으로 확인할 수 있도록 만든 인터랙티브 학습 도구입니다.</p>
             <p>깊이 우선 탐색(DFS), 너비 우선 탐색(BFS), 언덕 등반 탐색(Hill Climbing), 최상 우선 탐색(Best-First Search), A* 알고리즘이 실제로 탐색하는 과정을 단계별로 시각화하고, 논리적 추론 문제를 직접 풀어보는 시뮬레이터를 순서대로 제공할 예정입니다.</p>
+        </div>
+
+        <div class="section-block" style="margin-bottom:36px;">
+            <h3>탐색 알고리즘의 분류</h3>
+            <p class="block-lead">
+                탐색 알고리즘은 <strong>목표에 대한 정보를 쓰는지</strong>에 따라 크게 두 갈래로 나뉩니다.
+                아무 정보 없이 정해진 규칙대로 훑는 <strong>맹목적 탐색</strong>과, 목표에 얼마나 가까운지를 어림해 유리한 쪽부터 살피는 <strong>정보 이용 탐색</strong>입니다.
+            </p>
+
+            <div class="search-taxonomy">
+                <div class="tax-group">
+                    <div class="tax-cat">
+                        <span class="kr">맹목적 탐색</span>
+                        <span class="en">blind search</span>
+                    </div>
+                    <div class="tax-items">
+                        <a class="tax-item" href="#dfs-bfs" data-goto="dfs-bfs">
+                            <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
+                            <span class="tax-name">깊이 우선 탐색</span>
+                            <span class="tax-en">DFS · Depth First Search</span>
+                        </a>
+                        <a class="tax-item" href="#dfs-bfs" data-goto="dfs-bfs">
+                            <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
+                            <span class="tax-name">너비 우선 탐색</span>
+                            <span class="tax-en">BFS · Breadth First Search</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="tax-group">
+                    <div class="tax-cat informed">
+                        <span class="kr">정보 이용 탐색</span>
+                        <span class="en">informed search</span>
+                    </div>
+                    <div class="tax-items">
+                        <div class="tax-item soon">
+                            <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
+                            <span class="tax-name">언덕 등반 탐색</span>
+                            <span class="tax-en">HCS · Hill Climbing Search</span>
+                        </div>
+                        <div class="tax-item soon">
+                            <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
+                            <span class="tax-name">최상 우선 탐색</span>
+                            <span class="tax-en">Best First Search</span>
+                        </div>
+                        <div class="tax-item soon">
+                            <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
+                            <span class="tax-name">A* 알고리즘</span>
+                            <span class="tax-en">A* Search Algorithm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="section-block">
@@ -148,22 +200,66 @@
         </div>
     </section>
 
-    <!-- 깊이 우선 탐색 -->
-    <section id="tab-dfs" class="tab-panel">
+    <!-- 깊이 우선 탐색 & 너비 우선 탐색 -->
+    <section id="tab-dfs-bfs" class="tab-panel">
         <div class="algo-head">
-            <h2>깊이 우선 탐색</h2>
-            <span class="algo-en">Depth-First Search (DFS)</span>
+            <h2>깊이 우선 탐색 &amp; 너비 우선 탐색</h2>
+            <span class="algo-en">Depth-First &amp; Breadth-First Search</span>
         </div>
         <p class="algo-desc">
-            한 방향으로 갈 수 있는 만큼 최대한 깊이 들어간 뒤, 더 이상 갈 곳이 없으면 이전 갈림길로 되돌아와 다른 길을 탐색하는 방식입니다.
-            아래에서 문제를 하나씩 열어 직접 탐색 순서를 클릭해 보세요.
+            둘 다 목표에 대한 정보를 쓰지 않고 정해진 규칙대로만 훑는 <strong>맹목적 탐색</strong>입니다.
+            <strong>깊이 우선 탐색(DFS)</strong>은 한 방향으로 갈 수 있는 만큼 깊이 들어간 뒤 막히면 이전 갈림길로 되돌아오고,
+            <strong>너비 우선 탐색(BFS)</strong>은 같은 깊이의 노드를 모두 방문한 뒤에야 다음 깊이로 넘어갑니다.
+            같은 트리라도 두 방식의 탐색 순서는 전혀 달라집니다.
         </p>
+
+        <div class="compare-block">
+            <h3>두 탐색 방법 비교</h3>
+            <div class="table-scroll">
+                <table class="compare-table">
+                    <thead>
+                        <tr>
+                            <th class="row-head">구분</th>
+                            <th>깊이 우선 탐색 (DFS)</th>
+                            <th>너비 우선 탐색 (BFS)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class="row-head">탐색 방향</th>
+                            <td>한 방향으로 깊게<br><span class="sub">(한 경로를 끝까지)</span></td>
+                            <td>같은 층을 넓게</td>
+                        </tr>
+                        <tr>
+                            <th class="row-head">자료 구조</th>
+                            <td>스택(되돌아가기)</td>
+                            <td>큐(순서대로)</td>
+                        </tr>
+                        <tr>
+                            <th class="row-head">장점</th>
+                            <td>메모리 사용이 적음</td>
+                            <td>최단 경로 탐색에 유리</td>
+                        </tr>
+                        <tr>
+                            <th class="row-head">단점</th>
+                            <td>해답 없는 깊은 길에 빠질 수 있음</td>
+                            <td>넓어질수록 메모리 증가</td>
+                        </tr>
+                        <tr>
+                            <th class="row-head">활용</th>
+                            <td>미로 탐색, 경로 존재 확인</td>
+                            <td>웹 크롤러, 최단 경로</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <div class="accordion">
             <div class="accordion-item open" data-accordion-item>
                 <button class="accordion-trigger" data-accordion-trigger>
                     <span class="accordion-trigger-title">
-                        <span class="kr">DFS 예제</span>
+                        <span class="kr">DFS &amp; BFS 예제</span>
                         <span class="en">Click the Search Order</span>
                     </span>
                     <span class="accordion-chevron"></span>
@@ -173,130 +269,15 @@
                         <div class="rule-block">
                             <h4>문제 &amp; 규칙</h4>
                             <ul>
-                                <li>트리에서 <strong>깊이 우선 탐색(DFS)</strong> 순서대로 노드를 <strong>클릭</strong>해 보세요. 클릭한 순서가 아래에 "A → B → …" 형태로 표시됩니다.</li>
-                                <li>분기점에서는 <strong>왼쪽(알파벳이 앞선 노드)부터</strong> 먼저 내려갑니다. 더 갈 곳이 없으면 바로 위 분기점으로 되돌아가 다음 가지를 탐색합니다.</li>
-                                <li>주황색으로 표시된 노드가 <strong>목표 상태</strong>입니다. 목표 상태까지 도달하는 순서를 모두 클릭하면 자동으로 채점됩니다.</li>
+                                <li>상단에서 <strong>탐색 방식(DFS / BFS)</strong>을 고르고, 그 순서대로 노드를 <strong>클릭</strong>해 보세요. 클릭한 순서가 아래에 "A → B → …" 형태로 표시됩니다.</li>
+                                <li><strong>DFS</strong>는 분기점에서 왼쪽(알파벳이 앞선 노드)부터 끝까지 내려간 뒤, 막히면 바로 위 분기점으로 되돌아갑니다.</li>
+                                <li><strong>BFS</strong>는 같은 깊이의 노드를 왼쪽부터 모두 방문한 뒤에 다음 깊이로 넘어갑니다.</li>
+                                <li>노란 점선으로 표시된 노드가 <strong>목표 상태</strong>입니다. 목표 상태까지 도달하는 순서를 모두 클릭하면 자동으로 채점됩니다.</li>
+                                <li><strong>연습 문제 불러오기</strong>를 누르면 새로운 트리와 목표 상태는 물론, <strong>이번에 사용할 탐색 방식까지 무작위로 지정</strong>됩니다.</li>
                             </ul>
                         </div>
                         <div class="sim-frame-wrap" style="margin-top:16px;">
-                            <iframe src="simulators/dfs-trainer.html" title="DFS 탐색 순서 클릭 연습" style="height:640px; min-height:0;"></iframe>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="accordion-item" data-accordion-item>
-                <button class="accordion-trigger" data-accordion-trigger>
-                    <span class="accordion-trigger-title">
-                        <span class="kr">강 건너기</span>
-                        <span class="en">Farmer, Wolf, Goat &amp; Cabbage</span>
-                    </span>
-                    <span class="accordion-chevron"></span>
-                </button>
-                <div class="accordion-panel">
-                    <div class="accordion-body">
-
-                        <div class="rule-block">
-                            <h4>문제 &amp; 규칙</h4>
-                            <ul>
-                                <li>농부가 <strong>양, 늑대, 양배추</strong>를 배에 실어 강 건너로 옮기려 합니다. 배는 <strong>한 번에 농부 외에 한 가지만</strong> 태울 수 있습니다.</li>
-                                <li>농부가 없는 곳에 <strong>양과 늑대만</strong>남으면 늑대가 양을 잡아먹습니다.</li>
-                                <li>농부가 없는 곳에 <strong>양과 양배추만</strong> 남으면 양이 양배추를 먹어버립니다.</li>
-                                <li>넷 모두 강 건너편으로 무사히 옮기면 <strong>목표 상태</strong>입니다.</li>
-                            </ul>
-                        </div>
-
-                        <div class="river-states">
-                            <div class="river-card">
-                                <div class="river-card-label init">초기 상태</div>
-                                <div class="river-scene">
-                                    <div class="bank left">
-                                        <span title="농부">🧑‍🌾</span><span title="양">🐑</span><span title="늑대">🐺</span><span title="양배추">🥬</span>
-                                    </div>
-                                    <div class="river"><span class="boat left">🚣</span></div>
-                                    <div class="bank right"></div>
-                                </div>
-                            </div>
-                            <div class="river-card">
-                                <div class="river-card-label forbid">금지 상태</div>
-                                <div class="river-scene">
-                                    <div class="bank left">
-                                        <span title="농부">🧑‍🌾</span><span title="양배추">🥬</span>
-                                    </div>
-                                    <div class="river"><span class="boat left">🚣</span></div>
-                                    <div class="bank right unsafe">
-                                        <span title="양">🐑</span><span title="늑대">🐺</span>
-                                    </div>
-                                </div>
-                                <div class="river-card-note">양과 늑대만 남으면 안 돼요</div>
-                            </div>
-                            <div class="river-card">
-                                <div class="river-card-label forbid">금지 상태</div>
-                                <div class="river-scene">
-                                    <div class="bank left unsafe">
-                                        <span title="양">🐑</span><span title="양배추">🥬</span>
-                                    </div>
-                                    <div class="river"><span class="boat right">🚣</span></div>
-                                    <div class="bank right">
-                                        <span title="농부">🧑‍🌾</span><span title="늑대">🐺</span>
-                                    </div>
-                                </div>
-                                <div class="river-card-note">양과 양배추만 남으면 안 돼요</div>
-                            </div>
-                            <div class="river-card">
-                                <div class="river-card-label goal">목표 상태</div>
-                                <div class="river-scene">
-                                    <div class="bank left"></div>
-                                    <div class="river"><span class="boat right">🚣</span></div>
-                                    <div class="bank right">
-                                        <span title="농부">🧑‍🌾</span><span title="양">🐑</span><span title="늑대">🐺</span><span title="양배추">🥬</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="sim-frame-wrap" style="margin-top:18px;">
-                            <iframe src="simulators/river-crossing.html" title="강 건너기 탐색 순서 클릭 연습" style="height:640px; min-height:0;"></iframe>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 너비 우선 탐색 -->
-    <section id="tab-bfs" class="tab-panel">
-        <div class="algo-head">
-            <h2>너비 우선 탐색</h2>
-            <span class="algo-en">Breadth-First Search (BFS)</span>
-        </div>
-        <p class="algo-desc">
-            가까운 노드부터 한 단계씩 넓게 훑어나가는 방식입니다. 같은 깊이의 노드를 모두 방문한 뒤에야 다음 깊이로 넘어갑니다.
-            아래에서 문제를 하나씩 열어 직접 탐색 순서를 클릭해 보세요.
-        </p>
-
-        <div class="accordion">
-            <div class="accordion-item open" data-accordion-item>
-                <button class="accordion-trigger" data-accordion-trigger>
-                    <span class="accordion-trigger-title">
-                        <span class="kr">BFS 예제</span>
-                        <span class="en">Click the Search Order</span>
-                    </span>
-                    <span class="accordion-chevron"></span>
-                </button>
-                <div class="accordion-panel">
-                    <div class="accordion-body">
-                        <div class="rule-block">
-                            <h4>문제 &amp; 규칙</h4>
-                            <ul>
-                                <li>트리에서 <strong>너비 우선 탐색(BFS)</strong> 순서대로 노드를 <strong>클릭</strong>해 보세요. 클릭한 순서가 아래에 "A → B → …" 형태로 표시됩니다.</li>
-                                <li>같은 깊이(레벨)에 있는 노드를 <strong>왼쪽(알파벳이 앞선 노드)부터</strong> 모두 방문한 뒤, 다음 깊이로 넘어갑니다.</li>
-                                <li>주황색으로 표시된 노드가 <strong>목표 상태</strong>입니다. 목표 상태까지 도달하는 순서를 모두 클릭하면 자동으로 채점됩니다.</li>
-                            </ul>
-                        </div>
-                        <div class="sim-frame-wrap" style="margin-top:16px;">
-                            <iframe src="simulators/bfs-trainer.html" title="BFS 탐색 순서 클릭 연습" style="height:640px; min-height:0;"></iframe>
+                            <iframe src="simulators/search-trainer.html" title="DFS &amp; BFS 탐색 순서 클릭 연습" style="height:680px; min-height:0;"></iframe>
                         </div>
                     </div>
                 </div>

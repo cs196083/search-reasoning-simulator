@@ -243,6 +243,163 @@ main {
     margin: 0 0 24px;
 }
 
+.block-lead {
+    font-size: 15px;
+    line-height: 1.85;
+    color: var(--text-muted);
+    margin: -10px 0 26px;
+}
+
+.block-lead strong { color: var(--text); }
+
+/* 탐색 알고리즘 분류 다이어그램 */
+
+.search-taxonomy {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.tax-group {
+    display: grid;
+    grid-template-columns: minmax(170px, 220px) 1fr;
+    gap: 26px;
+    align-items: center;
+}
+
+.tax-cat {
+    background: var(--blue);
+    border-radius: 16px;
+    padding: 24px 18px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(28, 96, 239, 0.20);
+}
+
+.tax-cat.informed {
+    background: #4a82f3;
+}
+
+.tax-cat .kr {
+    display: block;
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--white);
+}
+
+.tax-cat .en {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.tax-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+}
+
+.tax-items::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: 28px;
+    bottom: 28px;
+    border-left: 2px dashed #a9c4f7;
+}
+
+.tax-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--white);
+    border: 1px solid var(--blue-light);
+    border-radius: 12px;
+    padding: 13px 18px;
+    box-shadow: 0 3px 10px rgba(28, 96, 239, 0.06);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.18s ease;
+}
+
+.tax-item::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: 50%;
+    width: 14px;
+    border-top: 2px dashed #a9c4f7;
+}
+
+a.tax-item:hover {
+    border-color: var(--blue);
+    transform: translateX(3px);
+    box-shadow: 0 6px 16px rgba(28, 96, 239, 0.14);
+}
+
+.tax-item.soon {
+    background: #f7f9fd;
+    border-color: #e7ecf6;
+}
+
+.tax-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tax-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--white);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+}
+
+.tax-item.soon .tax-icon {
+    background: #b3c3e0;
+}
+
+.tax-name {
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text);
+}
+
+.tax-item.soon .tax-name {
+    color: #8794b0;
+}
+
+.tax-en {
+    margin-left: auto;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.tax-item.soon .tax-en {
+    color: #a9b3c7;
+}
+
+@media (max-width: 780px) {
+    .tax-group { grid-template-columns: 1fr; gap: 12px; }
+    .tax-items::before, .tax-item::before { display: none; }
+    .tax-en { margin-left: 0; white-space: normal; }
+    .tax-item { flex-wrap: wrap; }
+}
+
 /* AI hierarchy diagram */
 
 .ai-hierarchy {
@@ -401,6 +558,88 @@ main {
     min-height: 640px;
     border: 0;
     display: block;
+}
+
+/* ---------- DFS vs BFS 비교표 ---------- */
+
+.compare-block {
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(28, 96, 239, 0.12);
+    border-radius: 20px;
+    padding: 28px 32px 30px;
+    box-shadow: 0 10px 30px rgba(28, 96, 239, 0.08);
+    margin-bottom: 26px;
+}
+
+.compare-block h3 {
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--text);
+    margin: 0 0 18px;
+}
+
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.compare-table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--white);
+}
+
+.compare-table th,
+.compare-table td {
+    padding: 16px 18px;
+    text-align: center;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    border-bottom: 1px solid #eaf0fc;
+}
+
+.compare-table thead th {
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--white);
+    background: var(--blue);
+    border-bottom: 0;
+}
+
+.compare-table thead th.row-head {
+    background: #1543b8;
+}
+
+.compare-table tbody th.row-head {
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--blue-light);
+    width: 22%;
+}
+
+.compare-table tbody tr:nth-child(even) td {
+    background: #f5f8ff;
+}
+
+.compare-table tbody tr:last-child th,
+.compare-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.compare-table td .sub {
+    display: block;
+    font-size: 12.5px;
+    color: #8794b0;
+    margin-top: 2px;
 }
 
 /* ---------- Accordion (탐색 트리) ---------- */
