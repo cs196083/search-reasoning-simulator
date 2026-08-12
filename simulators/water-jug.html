@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4L 만들기 — 상태공간 트리 만들기</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+    @font-face {
+        font-family: 'KIMM';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KIMM_Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-7Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    :root {
+        --white: #FFFFFF;
+        --blue: #1C60EF;
+        --blue-light: #DBE8FE;
+        --text: #16223f;
+        --text-muted: #55647f;
+        --red: #ef4444;
+        --red-light: #fee2e2;
+        --gold: #d4a017;
+        --gold-light: #fef3c7;
+        --font-title: 'KIMM', 'Malgun Gothic', sans-serif;
+        --font-body: 'A2z', 'Malgun Gothic', sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: var(--font-body);
+        color: var(--text);
+        background: var(--white);
+        overflow: hidden;
+        user-select: none;
+    }
+    .app { display: flex; flex-direction: column; height: 100%; }
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: #fbfcff;
+        flex-shrink: 0;
+    }
+    .topbar .title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .topbar h1 { font-family: var(--font-title); font-weight: 700; font-size: 15px; margin: 0; color: var(--text); }
+    .legend { display: flex; gap: 8px; flex-wrap: wrap; }
+    .legend .tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .tag-init { background: #e2e8f0; color: #475569; }
+    .tag-noop { background: #f1f5f9; color: var(--text-muted); }
+    .tag-goal { background: var(--gold-light); color: var(--gold); }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.action {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 12.5px;
+        border-radius: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--blue-light);
+        background: var(--white);
+        color: var(--blue);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    button.action:hover { background: var(--blue-light); }
+    button.action.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
+    button.action.primary:hover { background: #164fce; }
+    button.action.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
+
+    .status-banner {
+        display: none;
+        padding: 9px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .status-banner.show { display: block; }
+    .status-banner.ok { background: var(--gold-light); color: #92700c; }
+    .status-banner.bad { background: var(--red-light); color: #b91c1c; }
+    .status-banner.info { background: var(--blue-light); color: #1e4bb8; }
+
+    .main-row { flex: 1; display: flex; min-height: 0; }
+
+    .canvas-outer {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+        background:
+            radial-gradient(circle at 1px 1px, rgba(28,96,239,0.10) 1px, transparent 0) 0 0 / 22px 22px,
+            var(--white);
+    }
+    .canvas-scaler { position: relative; }
+    .canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+    .canvas-inner svg { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+    .node {
+        position: absolute;
+        border-radius: 10px;
+        border: 2px solid var(--blue-light);
+        background: var(--white);
+        box-shadow: 0 4px 10px rgba(28, 96, 239, 0.10);
+        transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        cursor: pointer;
+    }
+    .node.selected { box-shadow: 0 0 0 3px rgba(28,96,239,0.30); }
+    .node.goal { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-light), 0 6px 18px rgba(212, 160, 23, 0.30); }
+    .node.target-goal { border-style: dashed; border-width: 3px; }
+    .node.noop { border-style: dashed; opacity: 0.62; }
+    .node.visited { background: #eef4ff; }
+
+    .node-badge {
+        position: absolute;
+        top: -10px;
+        left: 8px;
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+        z-index: 3;
+    }
+    .node-badge.order-badge {
+        left: auto;
+        right: 8px;
+        background: var(--text);
+        color: var(--white);
+    }
+    .node .action-text {
+        text-align: center;
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-top: 13px;
+        padding: 0 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .node.is-root .action-text { margin-top: 15px; }
+    .mini-jugs { display: flex; gap: 7px; justify-content: center; margin-top: 4px; }
+    .mini-jug {
+        width: 17px;
+        height: 32px;
+        border: 1.5px solid var(--blue);
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        position: relative;
+        overflow: hidden;
+        background: #f4f8ff;
+    }
+    .mini-jug .mwater { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(180deg,#5b8def,#1C60EF); }
+    .node .state-text { text-align: center; font-size: 10px; font-weight: 700; color: var(--text); margin-top: 3px; }
+
+    .drag-handle {
+        position: absolute;
+        bottom: -9px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--blue);
+        border: 2px solid var(--white);
+        cursor: grab;
+        z-index: 4;
+        box-shadow: 0 2px 6px rgba(28,96,239,0.4);
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    .confirm-pop, .choice-pop {
+        position: absolute;
+        z-index: 10;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+    }
+    .confirm-pop {
+        background: var(--text);
+        color: var(--white);
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .confirm-pop button { font-family: var(--font-body); font-weight: 700; font-size: 11.5px; border: 0; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+    .confirm-pop .yes { background: var(--red); color: var(--white); }
+    .confirm-pop .no { background: rgba(255,255,255,0.15); color: var(--white); }
+
+    .choice-pop {
+        background: var(--white);
+        border: 1px solid var(--blue-light);
+        border-radius: 10px;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 158px;
+        box-shadow: 0 10px 26px rgba(28,96,239,0.20);
+    }
+    .choice-pop-title { font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 2px 6px 4px; }
+    .choice-pop button {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 12px;
+        text-align: left;
+        padding: 7px 10px;
+        border-radius: 7px;
+        border: 1px solid transparent;
+        background: var(--white);
+        color: var(--text);
+        cursor: pointer;
+    }
+    .choice-pop button:hover:not(:disabled) { background: var(--blue-light); color: var(--blue); }
+    .choice-pop button:disabled { color: #c2cbdb; cursor: not-allowed; text-decoration: line-through; }
+
+    .shake { animation: nodeShake 0.3s ease; }
+    @keyframes nodeShake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-3px); }
+        75% { transform: translateX(3px); }
+    }
+
+    /* ---------- Animation panel ---------- */
+    .anim-panel {
+        width: 152px;
+        flex-shrink: 0;
+        border-left: 1px solid var(--blue-light);
+        background: #fbfcff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px 10px;
+        gap: 10px;
+    }
+    .anim-title { font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
+    .jugs { display: flex; gap: 14px; }
+    .jug-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .jug {
+        width: 44px;
+        height: 128px;
+        border: 2.5px solid var(--blue);
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        position: relative;
+        overflow: hidden;
+        background: #f4f8ff;
+    }
+    .jug .water { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(180deg,#5b8def,#1C60EF); transition: height 0.4s ease; }
+    .jug-label { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+    .jug-amount { font-family: var(--font-title); font-weight: 700; font-size: 13px; color: var(--blue); }
+    .anim-hint { font-size: 10.5px; color: var(--text-muted); text-align: center; line-height: 1.5; }
+
+    /* ---------- Canvas footer ---------- */
+    .canvas-footer {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 9px 18px;
+        border-top: 1px solid var(--blue-light);
+        background: #fbfcff;
+    }
+    .hint {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        background: var(--white);
+        border: 1px solid var(--blue-light);
+        padding: 4px 12px;
+        border-radius: 999px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+    .zoom-bar {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--white);
+        border: 1px solid var(--blue-light);
+        border-radius: 999px;
+        padding: 6px 10px 6px 14px;
+        box-shadow: 0 8px 22px rgba(28, 96, 239, 0.16);
+        z-index: 7;
+    }
+    .zoom-btn {
+        width: 26px; height: 26px; border-radius: 50%;
+        border: 1px solid var(--blue-light); background: var(--white); color: var(--blue);
+        font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .zoom-btn:hover { background: var(--blue-light); }
+    #zoom-slider { width: 100px; accent-color: var(--blue); }
+    #zoom-label { font-size: 11.5px; font-weight: 700; color: var(--text-muted); width: 34px; text-align: center; }
+    .zoom-fit {
+        font-family: var(--font-body); font-weight: 700; font-size: 11.5px;
+        border: 1px solid var(--blue-light); background: var(--white); color: var(--blue);
+        border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap;
+    }
+    .zoom-fit:hover { background: var(--blue-light); }
+
+    /* ---------- Search-order footer ---------- */
+    .seq-footer {
+        flex-shrink: 0;
+        border-top: 1px solid var(--blue-light);
+        background: #fbfcff;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .seq-footer .seq-label { font-size: 12px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .seq-track {
+        flex: 1; min-width: 160px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+        font-family: var(--font-title); font-weight: 700; font-size: 13px; color: var(--blue);
+    }
+    .seq-track .chip { background: var(--blue-light); border-radius: 8px; padding: 3px 9px; }
+    .seq-track .arrow { color: #a9b3c7; font-weight: 400; }
+    .seq-track .placeholder { color: #a9b3c7; font-weight: 400; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="topbar">
+        <div class="title">
+            <h1 id="page-title">4L 만들기 — 상태공간 트리 만들기</h1>
+            <div class="legend">
+                <span class="tag tag-init">● 초기 상태</span>
+                <span class="tag tag-noop">● 제자리 (변화 없음)</span>
+                <span class="tag tag-goal">● 목표 상태 (5L에 정확히 4L)</span>
+            </div>
+        </div>
+        <div class="controls" id="build-controls">
+            <button class="action" id="btn-reset">초기화</button>
+            <button class="action primary" id="btn-complete">트리 완성</button>
+        </div>
+        <div class="controls" id="search-controls" style="display:none;">
+            <button class="action" id="btn-mode-dfs">깊이 우선 연습</button>
+            <button class="action" id="btn-mode-bfs">너비 우선 연습</button>
+            <button class="action" id="btn-search-retry">순서 다시</button>
+            <button class="action primary" id="btn-back-build">트리 다시 만들기</button>
+        </div>
+    </div>
+
+    <div class="status-banner" id="status-banner"></div>
+
+    <div class="main-row">
+        <div class="canvas-outer" id="canvas-outer">
+            <div class="canvas-scaler" id="canvas-scaler">
+                <div class="canvas-inner" id="canvas-inner">
+                    <svg id="svg-layer"></svg>
+                </div>
+            </div>
+        </div>
+        <div class="anim-panel">
+            <div class="anim-title">현재 상태</div>
+            <div class="jugs">
+                <div class="jug-wrap">
+                    <div class="jug"><div class="water" id="water-a"></div></div>
+                    <div class="jug-label">A (5L)</div>
+                    <div class="jug-amount" id="amount-a">0L</div>
+                </div>
+                <div class="jug-wrap">
+                    <div class="jug"><div class="water" id="water-b"></div></div>
+                    <div class="jug-label">B (3L)</div>
+                    <div class="jug-amount" id="amount-b">0L</div>
+                </div>
+            </div>
+            <div class="anim-hint" id="anim-hint">노드를 클릭하면 그 상태가 여기에 표시돼요</div>
+        </div>
+    </div>
+
+    <div class="canvas-footer">
+        <div class="hint" id="hint-text">보드 아래 파란 점을 드래그해서 다음 행동을 선택하세요 (우클릭: 삭제)</div>
+        <div class="zoom-bar">
+            <button class="zoom-btn" id="zoom-out" title="축소">&minus;</button>
+            <input type="range" id="zoom-slider" min="40" max="150" step="10" value="100">
+            <span id="zoom-label">100%</span>
+            <button class="zoom-btn" id="zoom-in" title="확대">+</button>
+            <button class="zoom-fit" id="zoom-fit">전체 보기</button>
+        </div>
+    </div>
+
+    <div class="seq-footer" id="seq-footer" style="display:none;">
+        <span class="seq-label">클릭한 순서</span>
+        <div class="seq-track" id="seq-track"><span class="placeholder">노드를 클릭하면 여기에 표시돼요</span></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var ACTIONS = ['fillA', 'fillB', 'emptyA', 'emptyB', 'pourAB', 'pourBA'];
+    var ACTION_LABEL = {
+        fillA: 'A(5L) 채우기', fillB: 'B(3L) 채우기',
+        emptyA: 'A(5L) 비우기', emptyB: 'B(3L) 비우기',
+        pourAB: 'A → B 붓기', pourBA: 'B → A 붓기'
+    };
+    var CAP_A = 5, CAP_B = 3, GOAL_A = 4;
+
+    var NODE_W = 112, NODE_H = 96;
+    var LEVEL_H = 150;
+    var SLOT_W = NODE_W + 34;
+
+    var zoom = 1;
+    var ZOOM_MIN = 0.4, ZOOM_MAX = 1.5;
+
+    var nodes = {};
+    var seq = 0;
+    var mode = 'build'; // 'build' | 'search'
+    var searchAlgo = 'dfs';
+    var targetGoalId = null;
+    var visitedOrder = [];
+    var searchGraded = false;
+    var selectedId = 'root';
+
+    function makeRoot() {
+        nodes = {};
+        seq = 0;
+        nodes.root = { id: 'root', parentId: null, depth: 0, action: null, state: { a: 0, b: 0 }, kind: 'init', children: [], x: 0, y: 0 };
+    }
+    makeRoot();
+
+    var canvasOuter = document.getElementById('canvas-outer');
+    var canvasScaler = document.getElementById('canvas-scaler');
+    var canvasInner = document.getElementById('canvas-inner');
+    var svg = document.getElementById('svg-layer');
+    var statusBanner = document.getElementById('status-banner');
+    var zoomSlider = document.getElementById('zoom-slider');
+    var zoomLabel = document.getElementById('zoom-label');
+    var hintText = document.getElementById('hint-text');
+    var seqFooter = document.getElementById('seq-footer');
+    var seqTrack = document.getElementById('seq-track');
+    var buildControls = document.getElementById('build-controls');
+    var searchControls = document.getElementById('search-controls');
+
+    // ---------- Rule engine ----------
+
+    function applyAction(state, action) {
+        var a = state.a, b = state.b;
+        if (action === 'fillA') return { a: CAP_A, b: b };
+        if (action === 'fillB') return { a: a, b: CAP_B };
+        if (action === 'emptyA') return { a: 0, b: b };
+        if (action === 'emptyB') return { a: a, b: 0 };
+        if (action === 'pourAB') { var amt = Math.min(a, CAP_B - b); return { a: a - amt, b: b + amt }; }
+        if (action === 'pourBA') { var amt2 = Math.min(b, CAP_A - a); return { a: a + amt2, b: b - amt2 }; }
+        return { a: a, b: b };
+    }
+
+    function sameState(s1, s2) { return s1.a === s2.a && s1.b === s2.b; }
+
+    function ancestorStatesOf(node) {
+        var states = [];
+        var cur = node;
+        while (cur) {
+            states.unshift(cur.state);
+            cur = (cur.parentId !== null) ? nodes[cur.parentId] : null;
+        }
+        return states; // root...node inclusive
+    }
+
+    function classify(ancestorStates, action) {
+        var parentState = ancestorStates[ancestorStates.length - 1];
+        var ns = applyAction(parentState, action);
+        var noChange = sameState(ns, parentState);
+        var repeat = !noChange && ancestorStates.some(function (s) { return sameState(s, ns); });
+        var kind;
+        if (noChange || repeat) kind = 'noop';
+        else if (ns.a === GOAL_A) kind = 'goal';
+        else kind = 'ok';
+        return { state: ns, kind: kind };
+    }
+
+    // ---------- Layout ----------
+
+    function layout() {
+        var slotCounter = { n: 0 };
+        function assign(node) {
+            if (node.children.length === 0) {
+                node.x = slotCounter.n * SLOT_W;
+                slotCounter.n++;
+            } else {
+                node.children.forEach(function (id) { assign(nodes[id]); });
+                var xs = node.children.map(function (id) { return nodes[id].x; });
+                node.x = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+            }
+            node.y = node.depth * LEVEL_H;
+        }
+        assign(nodes.root);
+
+        var maxDepth = 0;
+        Object.keys(nodes).forEach(function (id) { maxDepth = Math.max(maxDepth, nodes[id].depth); });
+        var totalH = (maxDepth + 1) * LEVEL_H + 60;
+        var outerW = canvasOuter.clientWidth / zoom;
+        var treeW = Math.max(slotCounter.n * SLOT_W, SLOT_W);
+        var innerW = Math.max(outerW, treeW + 160);
+        var offset = innerW / 2 - (nodes.root.x + NODE_W / 2);
+        Object.keys(nodes).forEach(function (id) { nodes[id].x += offset; });
+
+        canvasInner.style.width = innerW + 'px';
+        canvasInner.style.height = totalH + 'px';
+        canvasInner.style.transform = 'scale(' + zoom + ')';
+        canvasScaler.style.width = (innerW * zoom) + 'px';
+        canvasScaler.style.height = (totalH * zoom) + 'px';
+        svg.setAttribute('width', innerW);
+        svg.setAttribute('height', totalH);
+    }
+
+    // ---------- Zoom ----------
+
+    function setZoom(z) {
+        zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+        zoomSlider.value = Math.round(zoom * 100);
+        zoomLabel.textContent = Math.round(zoom * 100) + '%';
+        render();
+    }
+    document.getElementById('zoom-in').addEventListener('click', function () { setZoom(zoom + 0.1); });
+    document.getElementById('zoom-out').addEventListener('click', function () { setZoom(zoom - 0.1); });
+    zoomSlider.addEventListener('input', function () { setZoom(zoomSlider.value / 100); });
+    document.getElementById('zoom-fit').addEventListener('click', function () {
+        var maxDepth = 0;
+        Object.keys(nodes).forEach(function (id) { maxDepth = Math.max(maxDepth, nodes[id].depth); });
+        var totalH = (maxDepth + 1) * LEVEL_H + 60;
+        var fit = canvasOuter.clientHeight / totalH;
+        setZoom(fit);
+        canvasOuter.scrollTop = 0;
+        setTimeout(function () {
+            canvasOuter.scrollLeft = (canvasScaler.scrollWidth - canvasOuter.clientWidth) / 2;
+        }, 0);
+    });
+
+    // ---------- Render ----------
+
+    function render() {
+        layout();
+        canvasInner.querySelectorAll('.node').forEach(function (el) { el.remove(); });
+        svg.innerHTML = '';
+
+        Object.keys(nodes).forEach(function (id) {
+            var node = nodes[id];
+            if (node.parentId !== null) {
+                var parent = nodes[node.parentId];
+                var x1 = parent.x + NODE_W / 2, y1 = parent.y + NODE_H + 20;
+                var x2 = node.x + NODE_W / 2, y2 = node.y + 20;
+                var midY = (y1 + y2) / 2;
+                var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
+                path.setAttribute('stroke', '#c7d6f9');
+                path.setAttribute('stroke-width', '2.5');
+                path.setAttribute('fill', 'none');
+                svg.appendChild(path);
+            }
+            renderNode(node);
+        });
+    }
+
+    function renderNode(node) {
+        var el = document.createElement('div');
+        var visitedIdx = mode === 'search' ? visitedOrder.indexOf(node.id) : -1;
+        el.className = 'node' +
+            (node.id === 'root' ? ' is-root' : '') +
+            (node.kind === 'goal' ? ' goal' : '') +
+            (node.kind === 'noop' ? ' noop' : '') +
+            (node.id === targetGoalId ? ' target-goal' : '') +
+            (node.id === selectedId ? ' selected' : '') +
+            (visitedIdx >= 0 ? ' visited' : '');
+        el.style.left = node.x + 'px';
+        el.style.top = (node.y + 20) + 'px';
+        el.style.width = NODE_W + 'px';
+        el.style.height = NODE_H + 'px';
+        el.dataset.id = node.id;
+
+        if (node.id === 'root') {
+            var b = document.createElement('div');
+            b.className = 'node-badge tag-init';
+            b.style.background = '#e2e8f0'; b.style.color = '#475569';
+            b.textContent = '초기 상태';
+            el.appendChild(b);
+        } else if (node.kind === 'goal') {
+            var gb = document.createElement('div');
+            gb.className = 'node-badge tag-goal';
+            gb.style.background = '#fef3c7'; gb.style.color = '#92700c';
+            gb.textContent = node.id === targetGoalId ? '🎯 이번 목표' : '목표 상태';
+            el.appendChild(gb);
+        } else if (node.kind === 'noop') {
+            var nb = document.createElement('div');
+            nb.className = 'node-badge tag-noop';
+            nb.style.background = '#f1f5f9'; nb.style.color = '#64748b';
+            nb.textContent = '제자리';
+            el.appendChild(nb);
+        }
+
+        if (visitedIdx >= 0) {
+            var ob = document.createElement('div');
+            ob.className = 'node-badge order-badge';
+            ob.textContent = visitedIdx + 1;
+            el.appendChild(ob);
+        }
+
+        if (node.id !== 'root') {
+            var actionText = document.createElement('div');
+            actionText.className = 'action-text';
+            actionText.textContent = ACTION_LABEL[node.action];
+            el.appendChild(actionText);
+        }
+
+        var jugs = document.createElement('div');
+        jugs.className = 'mini-jugs';
+        jugs.innerHTML =
+            '<div class="mini-jug"><div class="mwater" style="height:' + (node.state.a / CAP_A * 100) + '%"></div></div>' +
+            '<div class="mini-jug"><div class="mwater" style="height:' + (node.state.b / CAP_B * 100) + '%"></div></div>';
+        el.appendChild(jugs);
+
+        var stateText = document.createElement('div');
+        stateText.className = 'state-text';
+        stateText.textContent = '5L ' + node.state.a + ' · 3L ' + node.state.b;
+        el.appendChild(stateText);
+
+        el.addEventListener('click', function (ev) {
+            if (ev.target.closest('.drag-handle')) return;
+            onNodeClick(node.id);
+        });
+
+        if (mode === 'build') {
+            if (node.id !== 'root') {
+                el.addEventListener('contextmenu', function (ev) {
+                    ev.preventDefault();
+                    askDelete(node.id, ev.clientX, ev.clientY);
+                });
+            }
+            var canBranch = node.id === 'root' || node.kind === 'ok';
+            if (canBranch) {
+                var handle = document.createElement('div');
+                handle.className = 'drag-handle';
+                handle.addEventListener('pointerdown', function (ev) { startDrag(node.id, ev); });
+                el.appendChild(handle);
+            }
+        }
+
+        canvasInner.appendChild(el);
+    }
+
+    // ---------- Selection / animation panel ----------
+
+    function updateAnimPanel(state) {
+        document.getElementById('water-a').style.height = (state.a / CAP_A * 100) + '%';
+        document.getElementById('water-b').style.height = (state.b / CAP_B * 100) + '%';
+        document.getElementById('amount-a').textContent = state.a + 'L';
+        document.getElementById('amount-b').textContent = state.b + 'L';
+    }
+
+    function onNodeClick(id) {
+        selectedId = id;
+        updateAnimPanel(nodes[id].state);
+        if (mode === 'search' && !searchGraded && visitedOrder.indexOf(id) < 0) {
+            visitedOrder.push(id);
+            renderSeq();
+            if (id === targetGoalId) grade();
+        }
+        render();
+    }
+
+    function flashShake(nodeId) {
+        var el = canvasInner.querySelector('.node[data-id="' + nodeId + '"]');
+        if (!el) return;
+        el.classList.remove('shake');
+        void el.offsetWidth;
+        el.classList.add('shake');
+    }
+
+    // ---------- Drag to create child + choice menu ----------
+
+    var dragState = null;
+    var ghostPath = null;
+
+    function startDrag(parentId, ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var handle = ev.currentTarget;
+        dragState = { parentId: parentId, handle: handle };
+        try { handle.setPointerCapture(ev.pointerId); } catch (e) {}
+        ghostPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        ghostPath.setAttribute('stroke', '#94a3b8');
+        ghostPath.setAttribute('stroke-width', '2.5');
+        ghostPath.setAttribute('stroke-dasharray', '5,5');
+        ghostPath.setAttribute('fill', 'none');
+        svg.appendChild(ghostPath);
+        handle.addEventListener('pointermove', onDragMove);
+        handle.addEventListener('pointerup', onDragEnd);
+        window.addEventListener('pointermove', onDragMove);
+        window.addEventListener('pointerup', onDragEnd);
+    }
+
+    function autoScrollNearEdge(clientY) {
+        var rect = canvasOuter.getBoundingClientRect();
+        var margin = 50;
+        if (clientY < rect.top + margin) {
+            canvasOuter.scrollTop -= (margin - (clientY - rect.top)) * 0.5;
+        } else if (clientY > rect.bottom - margin) {
+            canvasOuter.scrollTop += (margin - (rect.bottom - clientY)) * 0.5;
+        }
+    }
+
+    function onDragMove(ev) {
+        if (!dragState) return;
+        autoScrollNearEdge(ev.clientY);
+        var parent = nodes[dragState.parentId];
+        var rect = canvasInner.getBoundingClientRect();
+        var x1 = parent.x + NODE_W / 2, y1 = parent.y + NODE_H + 20;
+        var x2 = (ev.clientX - rect.left) / zoom, y2 = (ev.clientY - rect.top) / zoom;
+        var midY = (y1 + y2) / 2;
+        ghostPath.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
+    }
+
+    function onDragEnd(ev) {
+        var handle = dragState && dragState.handle;
+        if (handle) {
+            handle.removeEventListener('pointermove', onDragMove);
+            handle.removeEventListener('pointerup', onDragEnd);
+            try { handle.releasePointerCapture(ev.pointerId); } catch (e) {}
+        }
+        window.removeEventListener('pointermove', onDragMove);
+        window.removeEventListener('pointerup', onDragEnd);
+        if (ghostPath) { ghostPath.remove(); ghostPath = null; }
+        if (!dragState) return;
+        var parentId = dragState.parentId;
+        dragState = null;
+
+        var rect = canvasOuter.getBoundingClientRect();
+        var withinY = ev.clientY >= rect.top - 40 && ev.clientY <= rect.bottom + 400;
+        if (withinY) openChoiceMenu(parentId, ev.clientX, ev.clientY);
+    }
+
+    function clampPopupToBounds(pop) {
+        var bounds = canvasOuter.getBoundingClientRect();
+        var prect = pop.getBoundingClientRect();
+        var dx = 0, dy = 0;
+        if (prect.right > bounds.right) dx = bounds.right - prect.right - 8;
+        if (prect.left < bounds.left) dx = Math.max(dx, bounds.left - prect.left + 8);
+        if (prect.bottom > bounds.bottom) dy = bounds.bottom - prect.bottom - 8;
+        if (prect.top < bounds.top) dy = Math.max(dy, bounds.top - prect.top + 8);
+        if (dx || dy) {
+            var curLeft = parseFloat(pop.style.left) || 0;
+            var curTop = parseFloat(pop.style.top) || 0;
+            pop.style.left = (curLeft + dx / zoom) + 'px';
+            pop.style.top = (curTop + dy / zoom) + 'px';
+        }
+    }
+
+    function openChoiceMenu(parentId, clientX, clientY) {
+        document.querySelectorAll('.choice-pop').forEach(function (p) { p.remove(); });
+        var parent = nodes[parentId];
+        var usedActions = parent.children.map(function (cid) { return nodes[cid].action; });
+        var rect = canvasInner.getBoundingClientRect();
+
+        var pop = document.createElement('div');
+        pop.className = 'choice-pop';
+        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
+        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
+
+        var title = document.createElement('div');
+        title.className = 'choice-pop-title';
+        title.textContent = '어떤 행동을 할까요?';
+        pop.appendChild(title);
+
+        ACTIONS.forEach(function (a) {
+            var btn = document.createElement('button');
+            btn.textContent = ACTION_LABEL[a];
+            if (usedActions.indexOf(a) >= 0) {
+                btn.disabled = true;
+            } else {
+                btn.addEventListener('click', function () {
+                    addChildWithAction(parentId, a, clientX);
+                    pop.remove();
+                    document.removeEventListener('pointerdown', onAway);
+                });
+            }
+            pop.appendChild(btn);
+        });
+
+        canvasInner.appendChild(pop);
+        clampPopupToBounds(pop);
+
+        function onAway(ev2) {
+            if (!pop.contains(ev2.target)) {
+                pop.remove();
+                document.removeEventListener('pointerdown', onAway);
+            }
+        }
+        setTimeout(function () { document.addEventListener('pointerdown', onAway); }, 0);
+    }
+
+    function addChildWithAction(parentId, action, dropClientX) {
+        var parent = nodes[parentId];
+        var ancestorStates = ancestorStatesOf(parent);
+        var result = classify(ancestorStates, action);
+        var id = 'n' + (++seq);
+        var node = { id: id, parentId: parent.id, depth: parent.depth + 1, action: action, state: result.state, kind: result.kind, children: [], x: 0, y: 0 };
+        nodes[id] = node;
+
+        var rect = canvasInner.getBoundingClientRect();
+        var dropX = (dropClientX - rect.left) / zoom;
+        var idx = parent.children.filter(function (cid) { return nodes[cid].x < dropX; }).length;
+        parent.children.splice(idx, 0, id);
+
+        selectedId = id;
+        updateAnimPanel(node.state);
+        clearBanner();
+        render();
+    }
+
+    function deleteNode(nodeId) {
+        var node = nodes[nodeId];
+        if (!node || node.id === 'root') return;
+        node.children.slice().forEach(deleteNode);
+        var parent = nodes[node.parentId];
+        parent.children = parent.children.filter(function (id) { return id !== nodeId; });
+        delete nodes[nodeId];
+        if (selectedId === nodeId) selectedId = 'root';
+    }
+
+    function askDelete(nodeId, clientX, clientY) {
+        document.querySelectorAll('.confirm-pop').forEach(function (p) { p.remove(); });
+        var rect = canvasInner.getBoundingClientRect();
+        var pop = document.createElement('div');
+        pop.className = 'confirm-pop';
+        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
+        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
+        pop.innerHTML = '<span>이 노드를 삭제할까요?</span>';
+        var yes = document.createElement('button');
+        yes.className = 'yes'; yes.textContent = '삭제';
+        yes.addEventListener('click', function () {
+            deleteNode(nodeId);
+            pop.remove();
+            clearBanner();
+            render();
+        });
+        var no = document.createElement('button');
+        no.className = 'no'; no.textContent = '취소';
+        no.addEventListener('click', function () { pop.remove(); });
+        pop.appendChild(yes); pop.appendChild(no);
+        canvasInner.appendChild(pop);
+        clampPopupToBounds(pop);
+
+        setTimeout(function () {
+            document.addEventListener('pointerdown', function onAway(ev) {
+                if (!pop.contains(ev.target)) { pop.remove(); }
+                document.removeEventListener('pointerdown', onAway);
+            });
+        }, 0);
+    }
+
+    function clearBanner() {
+        statusBanner.className = 'status-banner';
+        statusBanner.textContent = '';
+    }
+
+    // ---------- Build -> Search transition ----------
+
+    document.getElementById('btn-complete').addEventListener('click', function () {
+        var goalIds = Object.keys(nodes).filter(function (id) { return nodes[id].kind === 'goal'; });
+        if (goalIds.length === 0) {
+            statusBanner.className = 'status-banner show info';
+            statusBanner.textContent = '아직 목표 상태(5L에 정확히 4L)에 도달하지 못했어요. 트리를 이어서 만들어 주세요.';
+            return;
+        }
+        goalIds.sort(function (idA, idB) {
+            var na = nodes[idA], nb = nodes[idB];
+            if (na.depth !== nb.depth) return na.depth - nb.depth;
+            return na.x - nb.x;
+        });
+        targetGoalId = goalIds[0];
+        enterSearchMode();
+        fireConfetti();
+    });
+
+    function enterSearchMode() {
+        mode = 'search';
+        searchAlgo = 'dfs';
+        visitedOrder = [];
+        searchGraded = false;
+        buildControls.style.display = 'none';
+        searchControls.style.display = 'flex';
+        seqFooter.style.display = 'flex';
+        hintText.textContent = '목표로 표시된 노드까지 깊이 우선 탐색 순서대로 노드를 클릭해 보세요.';
+        statusBanner.className = 'status-banner show ok';
+        statusBanner.textContent = '트리 완성! 이제 목표 상태까지의 탐색 순서를 클릭으로 연습해 보세요.';
+        setModeButtons();
+        renderSeq();
+        render();
+    }
+
+    document.getElementById('btn-back-build').addEventListener('click', function () {
+        mode = 'build';
+        buildControls.style.display = 'flex';
+        searchControls.style.display = 'none';
+        seqFooter.style.display = 'none';
+        hintText.textContent = '보드 아래 파란 점을 드래그해서 다음 행동을 선택하세요 (우클릭: 삭제)';
+        clearBanner();
+        render();
+    });
+
+    function setModeButtons() {
+        document.getElementById('btn-mode-dfs').classList.toggle('active', searchAlgo === 'dfs');
+        document.getElementById('btn-mode-bfs').classList.toggle('active', searchAlgo === 'bfs');
+    }
+
+    document.getElementById('btn-mode-dfs').addEventListener('click', function () {
+        searchAlgo = 'dfs';
+        visitedOrder = []; searchGraded = false;
+        hintText.textContent = '목표로 표시된 노드까지 깊이 우선 탐색 순서대로 노드를 클릭해 보세요.';
+        clearBanner(); setModeButtons(); renderSeq(); render();
+    });
+    document.getElementById('btn-mode-bfs').addEventListener('click', function () {
+        searchAlgo = 'bfs';
+        visitedOrder = []; searchGraded = false;
+        hintText.textContent = '목표로 표시된 노드까지 너비 우선 탐색 순서대로 노드를 클릭해 보세요.';
+        clearBanner(); setModeButtons(); renderSeq(); render();
+    });
+    document.getElementById('btn-search-retry').addEventListener('click', function () {
+        visitedOrder = []; searchGraded = false;
+        clearBanner(); renderSeq(); render();
+    });
+
+    // ---------- Search grading ----------
+
+    function computeDfsPathTo(goalId) {
+        var path = []; var found = false;
+        function visit(id) {
+            if (found) return;
+            path.push(id);
+            if (id === goalId) { found = true; return; }
+            nodes[id].children.forEach(function (c) { if (!found) visit(c); });
+        }
+        visit('root');
+        return path;
+    }
+
+    function computeBfsPathTo(goalId) {
+        var path = []; var visited = { root: true }; var queue = ['root'];
+        while (queue.length) {
+            var id = queue.shift();
+            path.push(id);
+            if (id === goalId) break;
+            nodes[id].children.forEach(function (c) { if (!visited[c]) { visited[c] = true; queue.push(c); } });
+        }
+        return path;
+    }
+
+    function renderSeq() {
+        if (visitedOrder.length === 0) {
+            seqTrack.innerHTML = '<span class="placeholder">노드를 클릭하면 여기에 표시돼요</span>';
+            return;
+        }
+        seqTrack.innerHTML = visitedOrder.map(function (id, i) {
+            var label = id === 'root' ? '초기' : id;
+            return (i > 0 ? '<span class="arrow">→</span>' : '') + '<span class="chip">' + label + '</span>';
+        }).join('');
+    }
+
+    function grade() {
+        searchGraded = true;
+        var correct = searchAlgo === 'dfs' ? computeDfsPathTo(targetGoalId) : computeBfsPathTo(targetGoalId);
+        var isRight = correct.length === visitedOrder.length && correct.every(function (id, i) { return id === visitedOrder[i]; });
+        if (isRight) {
+            statusBanner.className = 'status-banner show ok';
+            statusBanner.textContent = '정답입니다! ' + (searchAlgo === 'dfs' ? '깊이' : '너비') + ' 우선 탐색 순서를 정확히 클릭했어요 🎉';
+            fireConfetti();
+        } else {
+            statusBanner.className = 'status-banner show bad';
+            statusBanner.textContent = '아쉬워요, 다시 도전해 보세요.';
+        }
+    }
+
+    function fireConfetti() {
+        if (typeof confetti !== 'function') return;
+        confetti({ particleCount: 80, spread: 65, origin: { x: 0.5, y: 0.4 } });
+    }
+
+    document.getElementById('btn-reset').addEventListener('click', function () {
+        makeRoot();
+        selectedId = 'root';
+        mode = 'build';
+        buildControls.style.display = 'flex';
+        searchControls.style.display = 'none';
+        seqFooter.style.display = 'none';
+        clearBanner();
+        updateAnimPanel({ a: 0, b: 0 });
+        render();
+    });
+
+    window.addEventListener('resize', render);
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () { render(); }).observe(canvasOuter);
+    }
+
+    updateAnimPanel({ a: 0, b: 0 });
+    render();
+})();
+</script>
+</body>
+</html>

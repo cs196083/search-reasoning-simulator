@@ -16,7 +16,7 @@
     <button class="tab-btn" data-tab="home">홈</button>
     <button class="tab-btn" data-tab="search-tree">탐색 트리</button>
     <button class="tab-btn" data-tab="dfs">깊이 우선 탐색</button>
-    <button class="tab-btn disabled" data-tab="bfs">너비 우선 탐색<span class="soon-badge">준비중</span></button>
+    <button class="tab-btn" data-tab="bfs">너비 우선 탐색</button>
     <button class="tab-btn disabled" data-tab="hill">언덕 등반 탐색<span class="soon-badge">준비중</span></button>
     <button class="tab-btn disabled" data-tab="best">최상 우선 탐색<span class="soon-badge">준비중</span></button>
     <button class="tab-btn disabled" data-tab="astar">A* 알고리즘<span class="soon-badge">준비중</span></button>
@@ -257,6 +257,93 @@
 
                         <div class="sim-frame-wrap" style="margin-top:18px;">
                             <iframe src="simulators/river-crossing.html" title="강 건너기 탐색 순서 클릭 연습" style="height:640px; min-height:0;"></iframe>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 너비 우선 탐색 -->
+    <section id="tab-bfs" class="tab-panel">
+        <div class="algo-head">
+            <h2>너비 우선 탐색</h2>
+            <span class="algo-en">Breadth-First Search (BFS)</span>
+        </div>
+        <p class="algo-desc">
+            가까운 노드부터 한 단계씩 넓게 훑어나가는 방식입니다. 같은 깊이의 노드를 모두 방문한 뒤에야 다음 깊이로 넘어갑니다.
+            아래에서 문제를 하나씩 열어 직접 탐색 순서를 클릭해 보세요.
+        </p>
+
+        <div class="accordion">
+            <div class="accordion-item open" data-accordion-item>
+                <button class="accordion-trigger" data-accordion-trigger>
+                    <span class="accordion-trigger-title">
+                        <span class="kr">BFS 예제</span>
+                        <span class="en">Click the Search Order</span>
+                    </span>
+                    <span class="accordion-chevron"></span>
+                </button>
+                <div class="accordion-panel">
+                    <div class="accordion-body">
+                        <div class="rule-block">
+                            <h4>문제 &amp; 규칙</h4>
+                            <ul>
+                                <li>트리에서 <strong>너비 우선 탐색(BFS)</strong> 순서대로 노드를 <strong>클릭</strong>해 보세요. 클릭한 순서가 아래에 "A → B → …" 형태로 표시됩니다.</li>
+                                <li>같은 깊이(레벨)에 있는 노드를 <strong>왼쪽(알파벳이 앞선 노드)부터</strong> 모두 방문한 뒤, 다음 깊이로 넘어갑니다.</li>
+                                <li>주황색으로 표시된 노드가 <strong>목표 상태</strong>입니다. 목표 상태까지 도달하는 순서를 모두 클릭하면 자동으로 채점됩니다.</li>
+                            </ul>
+                        </div>
+                        <div class="sim-frame-wrap" style="margin-top:16px;">
+                            <iframe src="simulators/bfs-trainer.html" title="BFS 탐색 순서 클릭 연습" style="height:640px; min-height:0;"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item" data-accordion-item>
+                <button class="accordion-trigger" data-accordion-trigger>
+                    <span class="accordion-trigger-title">
+                        <span class="kr">4L 만들기</span>
+                        <span class="en">DFS &amp; BFS — Water Jug</span>
+                    </span>
+                    <span class="accordion-chevron"></span>
+                </button>
+                <div class="accordion-panel">
+                    <div class="accordion-body">
+
+                        <div class="rule-block">
+                            <h4>문제 &amp; 규칙</h4>
+                            <ul>
+                                <li>용량이 각각 <strong>5L, 3L</strong>인 물통 A, B가 있습니다. 두 물통 모두 눈금이 없어 <strong>가득 채우거나 완전히 비우는 것</strong>만 정확히 할 수 있습니다.</li>
+                                <li>할 수 있는 행동은 <strong>A 채우기 · B 채우기 · A 비우기 · B 비우기 · A→B 붓기 · B→A 붓기</strong>, 총 6가지입니다.</li>
+                                <li>붓기는 <strong>옮기는 물통이 가득 차거나, 따르는 물통이 빌 때까지</strong> 계속됩니다.</li>
+                                <li>5L 물통(A)에 정확히 <strong>4L</strong>가 담기면 <strong>목표 상태</strong>입니다.</li>
+                            </ul>
+                        </div>
+
+                        <div class="jug-states">
+                            <div class="jug-card">
+                                <div class="river-card-label init">초기 상태</div>
+                                <div class="jug-card-jugs">
+                                    <div class="jug-card-jug"><div class="fill" style="height:0%;"></div></div>
+                                    <div class="jug-card-jug"><div class="fill" style="height:0%;"></div></div>
+                                </div>
+                                <div class="jug-card-caption">A: 0L · B: 0L</div>
+                            </div>
+                            <div class="jug-card">
+                                <div class="river-card-label goal">목표 상태 예시</div>
+                                <div class="jug-card-jugs">
+                                    <div class="jug-card-jug"><div class="fill" style="height:80%;"></div></div>
+                                    <div class="jug-card-jug"><div class="fill" style="height:100%;"></div></div>
+                                </div>
+                                <div class="jug-card-caption">A: 4L · B: 3L</div>
+                            </div>
+                        </div>
+
+                        <div class="sim-frame-wrap" style="margin-top:18px;">
+                            <iframe src="simulators/water-jug.html" title="4L 만들기 상태공간 트리 만들기" style="height:800px; min-height:0;"></iframe>
                         </div>
 
                     </div>
