@@ -66,6 +66,7 @@
     .legend .tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
     .tag-init { background: #e2e8f0; color: #475569; }
     .tag-noop { background: #f1f5f9; color: var(--text-muted); }
+    .tag-full { background: #e5edfd; color: #3a5a9c; }
     .tag-goal { background: var(--gold-light); color: var(--gold); }
 
     .controls { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -351,6 +352,7 @@
             <div class="legend">
                 <span class="tag tag-init">● 초기 상태</span>
                 <span class="tag tag-noop">● 제자리 (변화 없음)</span>
+                <span class="tag tag-full">● 둘 다 가득 (더 뻗을 수 없음)</span>
                 <span class="tag tag-goal">● 목표 상태 (5L에 정확히 4L)</span>
             </div>
         </div>
@@ -471,6 +473,10 @@
     }
 
     function sameState(s1, s2) { return s1.a === s2.a && s1.b === s2.b; }
+
+    // 두 물통이 모두 가득 찬 상태(5,3)는 어떤 행동을 해도 이미 지나온 상태로만 돌아가므로
+    // 더 이상 가지를 뻗지 않는다. (교과서 정답 트리에서도 (5,3)은 항상 잎 노드)
+    function isFullState(state) { return state.a === CAP_A && state.b === CAP_B; }
 
     function ancestorStatesOf(node) {
         var states = [];
@@ -611,6 +617,12 @@
             nb.style.background = '#f1f5f9'; nb.style.color = '#64748b';
             nb.textContent = '제자리';
             el.appendChild(nb);
+        } else if (isFullState(node.state)) {
+            var fb = document.createElement('div');
+            fb.className = 'node-badge tag-full';
+            fb.style.background = '#e5edfd'; fb.style.color = '#3a5a9c';
+            fb.textContent = '둘 다 가득';
+            el.appendChild(fb);
         }
 
         if (visitedIdx >= 0) {
@@ -651,7 +663,7 @@
                     askDelete(node.id, ev.clientX, ev.clientY);
                 });
             }
-            var canBranch = node.id === 'root' || node.kind === 'ok';
+            var canBranch = (node.id === 'root' || node.kind === 'ok') && !isFullState(node.state);
             if (canBranch) {
                 var handle = document.createElement('div');
                 handle.className = 'drag-handle';
