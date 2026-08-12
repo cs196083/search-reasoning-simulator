@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>4-Queens 상태공간 트리 만들기</title>
+<title>N-Queens 상태공간 트리 만들기</title>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
     @font-face {
@@ -146,6 +146,7 @@
     .status-banner.show { display: block; }
     .status-banner.ok { background: var(--gold-light); color: #92700c; }
     .status-banner.empty { background: #f1f5f9; color: var(--text-muted); }
+    .status-banner.info { background: var(--blue-light); color: #1e4bb8; }
 
     /* ---------- Canvas ---------- */
 
@@ -158,8 +159,15 @@
             var(--white);
     }
 
-    .canvas-inner {
+    .canvas-scaler {
         position: relative;
+    }
+
+    .canvas-inner {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform-origin: 0 0;
     }
 
     .canvas-inner svg {
@@ -171,8 +179,6 @@
 
     .node {
         position: absolute;
-        width: 104px;
-        height: 104px;
         border-radius: 10px;
         border: 2px solid var(--blue-light);
         background: var(--white);
@@ -214,11 +220,7 @@
         position: absolute;
         top: 8px;
         left: 8px;
-        width: 88px;
-        height: 88px;
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        grid-template-rows: repeat(4, 1fr);
         border-radius: 4px;
         overflow: hidden;
         border: 1px solid var(--blue-light);
@@ -228,7 +230,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 15px;
         color: var(--blue);
         background: var(--white);
     }
@@ -298,7 +299,7 @@
 
     .hint {
         position: absolute;
-        bottom: 10px;
+        bottom: 60px;
         left: 50%;
         transform: translateX(-50%);
         font-size: 11.5px;
@@ -309,14 +310,79 @@
         border-radius: 999px;
         white-space: nowrap;
         pointer-events: none;
+        z-index: 6;
     }
+
+    /* ---------- Zoom bar ---------- */
+
+    .zoom-bar {
+        position: absolute;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--white);
+        border: 1px solid var(--blue-light);
+        border-radius: 999px;
+        padding: 6px 10px 6px 14px;
+        box-shadow: 0 8px 22px rgba(28, 96, 239, 0.16);
+        z-index: 7;
+    }
+
+    .zoom-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 1px solid var(--blue-light);
+        background: var(--white);
+        color: var(--blue);
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .zoom-btn:hover { background: var(--blue-light); }
+
+    #zoom-slider {
+        width: 110px;
+        accent-color: var(--blue);
+    }
+
+    #zoom-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        width: 34px;
+        text-align: center;
+    }
+
+    .zoom-fit {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 11.5px;
+        border: 1px solid var(--blue-light);
+        background: var(--white);
+        color: var(--blue);
+        border-radius: 999px;
+        padding: 6px 12px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .zoom-fit:hover { background: var(--blue-light); }
 </style>
 </head>
 <body>
 <div class="app">
     <div class="topbar">
         <div class="title">
-            <h1>4-Queens 상태공간 트리 만들기</h1>
+            <h1 id="page-title">N-Queens 상태공간 트리 만들기</h1>
             <div class="legend">
                 <span class="tag tag-init">● 초기 상태</span>
                 <span class="tag tag-space">● 상태공간 (트리 전체)</span>
@@ -332,19 +398,43 @@
     <div class="status-banner" id="status-banner"></div>
 
     <div class="canvas-outer" id="canvas-outer">
-        <div class="canvas-inner" id="canvas-inner">
-            <svg id="svg-layer"></svg>
+        <div class="canvas-scaler" id="canvas-scaler">
+            <div class="canvas-inner" id="canvas-inner">
+                <svg id="svg-layer"></svg>
+            </div>
         </div>
-        <div class="hint">보드 아래 파란 점을 드래그해 자식 보드를 만들고, 그 행의 칸을 클릭해 퀸을 놓아 보세요 (우클릭: 보드 삭제)</div>
+        <div class="hint" id="hint-text">보드 아래 파란 점을 드래그해 자식 보드를 만들고, 그 행의 칸을 클릭해 퀸을 놓아 보세요 (우클릭: 보드 삭제)</div>
+        <div class="zoom-bar">
+            <button class="zoom-btn" id="zoom-out" title="축소">&minus;</button>
+            <input type="range" id="zoom-slider" min="40" max="150" step="10" value="100">
+            <span id="zoom-label">100%</span>
+            <button class="zoom-btn" id="zoom-in" title="확대">+</button>
+            <button class="zoom-fit" id="zoom-fit">전체 보기</button>
+        </div>
     </div>
 </div>
 
 <script>
 (function () {
-    var BOARD = 104;
+    var params = new URLSearchParams(location.search);
+    var N = parseInt(params.get('n'), 10);
+    if (!N || N < 4 || N > 6) N = 4;
+    var SOLUTIONS_COUNT = { 4: 2, 5: 10, 6: 4 }[N] || null;
+
+    document.title = N + '-Queens 상태공간 트리 만들기';
+    document.getElementById('page-title').textContent = N + '-Queens 상태공간 트리 만들기';
+    document.getElementById('hint-text').textContent =
+        '보드 아래 파란 점을 드래그해 자식 보드를 만들고, 그 행의 칸을 클릭해 퀸을 놓아 보세요 (우클릭: 보드 삭제)';
+
+    var GRID = 84 + (N - 4) * 16;
+    var BOARD = GRID + 16;
+    var CELL_FONT = N <= 4 ? 15 : (N === 5 ? 13 : 11);
     var LEVEL_H = 170;
-    var SLOT_W = 134;
-    var PALETTE = ['#1C60EF', '#0EA5A4', '#7C3AED', '#DB2777'];
+    var SLOT_W = BOARD + 30;
+    var PALETTE = ['#1C60EF', '#0EA5A4', '#7C3AED', '#DB2777', '#EA580C', '#0891B2'];
+
+    var zoom = 1;
+    var ZOOM_MIN = 0.4, ZOOM_MAX = 1.5;
 
     var nodes = {};
     var seq = 0;
@@ -357,9 +447,12 @@
     makeRoot();
 
     var canvasOuter = document.getElementById('canvas-outer');
+    var canvasScaler = document.getElementById('canvas-scaler');
     var canvasInner = document.getElementById('canvas-inner');
     var svg = document.getElementById('svg-layer');
     var statusBanner = document.getElementById('status-banner');
+    var zoomSlider = document.getElementById('zoom-slider');
+    var zoomLabel = document.getElementById('zoom-label');
 
     function ownRow(node) { return node.depth - 1; }
 
@@ -374,7 +467,8 @@
     }
 
     function queensByRow(node) {
-        var arr = [null, null, null, null];
+        var arr = [];
+        for (var i = 0; i < N; i++) arr.push(null);
         ancestorChain(node).forEach(function (n) {
             if (n.col !== null) arr[ownRow(n)] = n.col;
         });
@@ -391,6 +485,41 @@
             return false;
         });
         node.invalid = conflict;
+    }
+
+    function validColumnsAt(node) {
+        var chain = ancestorChain(node);
+        var nextDepth = node.depth + 1;
+        var cols = [];
+        for (var c = 0; c < N; c++) {
+            var ok = chain.every(function (a) {
+                if (a.col === null) return true;
+                if (a.col === c) return false;
+                if (Math.abs(a.depth - nextDepth) === Math.abs(a.col - c)) return false;
+                return true;
+            });
+            if (ok) cols.push(c);
+        }
+        return cols;
+    }
+
+    function findIncomplete() {
+        var bad = [];
+        Object.keys(nodes).forEach(function (id) {
+            var node = nodes[id];
+            if (node.id !== 'root' && node.col === null) { bad.push(node); return; }
+            if (node.invalid) return;
+            if (node.depth >= N) return;
+            var required = validColumnsAt(node);
+            var have = {};
+            node.children.forEach(function (cid) {
+                var c = nodes[cid];
+                if (c.col !== null) have[c.col] = true;
+            });
+            var missing = required.some(function (c) { return !have[c]; });
+            if (missing) bad.push(node);
+        });
+        return bad;
     }
 
     // ---------- Layout ----------
@@ -410,17 +539,43 @@
         }
         assign(nodes.root);
 
-        var outerW = canvasOuter.clientWidth;
+        var totalH = (N + 1) * LEVEL_H + 60;
+        var outerW = canvasOuter.clientWidth / zoom;
         var treeW = Math.max(slotCounter.n * SLOT_W, SLOT_W);
         var innerW = Math.max(outerW, treeW + 160);
         var offset = innerW / 2 - (nodes.root.x + BOARD / 2);
         Object.keys(nodes).forEach(function (id) { nodes[id].x += offset; });
 
         canvasInner.style.width = innerW + 'px';
-        canvasInner.style.height = (5 * LEVEL_H + 60) + 'px';
+        canvasInner.style.height = totalH + 'px';
+        canvasInner.style.transform = 'scale(' + zoom + ')';
+        canvasScaler.style.width = (innerW * zoom) + 'px';
+        canvasScaler.style.height = (totalH * zoom) + 'px';
         svg.setAttribute('width', innerW);
-        svg.setAttribute('height', 5 * LEVEL_H + 60);
+        svg.setAttribute('height', totalH);
     }
+
+    // ---------- Zoom ----------
+
+    function setZoom(z) {
+        zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+        zoomSlider.value = Math.round(zoom * 100);
+        zoomLabel.textContent = Math.round(zoom * 100) + '%';
+        render();
+    }
+
+    document.getElementById('zoom-in').addEventListener('click', function () { setZoom(zoom + 0.1); });
+    document.getElementById('zoom-out').addEventListener('click', function () { setZoom(zoom - 0.1); });
+    zoomSlider.addEventListener('input', function () { setZoom(zoomSlider.value / 100); });
+    document.getElementById('zoom-fit').addEventListener('click', function () {
+        var totalH = (N + 1) * LEVEL_H + 60;
+        var fit = canvasOuter.clientHeight / totalH;
+        setZoom(fit);
+        canvasOuter.scrollTop = 0;
+        setTimeout(function () {
+            canvasOuter.scrollLeft = (canvasScaler.scrollWidth - canvasOuter.clientWidth) / 2;
+        }, 0);
+    });
 
     // ---------- Render ----------
 
@@ -452,6 +607,8 @@
         el.className = 'node' + (node.invalid ? ' invalid' : '') + (node.goal ? ' goal' : '');
         el.style.left = node.x + 'px';
         el.style.top = (node.y + 20) + 'px';
+        el.style.width = BOARD + 'px';
+        el.style.height = BOARD + 'px';
         el.dataset.id = node.id;
 
         if (node.id === 'root') {
@@ -479,11 +636,16 @@
 
         var grid = document.createElement('div');
         grid.className = 'board-grid';
+        grid.style.width = GRID + 'px';
+        grid.style.height = GRID + 'px';
+        grid.style.gridTemplateColumns = 'repeat(' + N + ', 1fr)';
+        grid.style.gridTemplateRows = 'repeat(' + N + ', 1fr)';
         var rows = queensByRow(node);
-        for (var r = 0; r < 4; r++) {
-            for (var c = 0; c < 4; c++) {
+        for (var r = 0; r < N; r++) {
+            for (var c = 0; c < N; c++) {
                 var cell = document.createElement('div');
                 cell.className = 'cell' + ((r + c) % 2 === 1 ? ' alt' : '');
+                cell.style.fontSize = CELL_FONT + 'px';
                 if (rows[r] === c) cell.textContent = '♛';
                 if (node.id !== 'root' && r === ownRow(node)) {
                     cell.classList.add('own-row');
@@ -504,7 +666,7 @@
         }
 
         var canBranch = node.id === 'root' ? true : (node.col !== null && !node.invalid);
-        if (canBranch && node.depth < 4) {
+        if (canBranch && node.depth < N) {
             var handle = document.createElement('div');
             handle.className = 'drag-handle';
             handle.addEventListener('pointerdown', function (ev) { startDrag(node.id, ev); });
@@ -544,7 +706,7 @@
     function addChild(parentId, dropClientX) {
         var parent = nodes[parentId];
         var rect = canvasInner.getBoundingClientRect();
-        var dropX = dropClientX - rect.left;
+        var dropX = (dropClientX - rect.left) / zoom;
 
         var id = 'n' + (++seq);
         var color = parent.id === 'root' ? PALETTE[parent.children.length % PALETTE.length] : parent.color;
@@ -572,8 +734,8 @@
         var rect = canvasInner.getBoundingClientRect();
         var pop = document.createElement('div');
         pop.className = 'confirm-pop';
-        pop.style.left = (clientX - rect.left) + 'px';
-        pop.style.top = (clientY - rect.top) + 'px';
+        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
+        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
         pop.innerHTML = '<span>이 보드를 삭제할까요?</span>';
         var yes = document.createElement('button');
         yes.className = 'yes';
@@ -619,7 +781,6 @@
         svg.appendChild(ghostPath);
         handle.addEventListener('pointermove', onDragMove);
         handle.addEventListener('pointerup', onDragEnd);
-        // 캡처가 안 되는 환경(일부 자동화 도구 등)을 대비한 백업 리스너
         window.addEventListener('pointermove', onDragMove);
         window.addEventListener('pointerup', onDragEnd);
     }
@@ -640,7 +801,7 @@
         var parent = nodes[dragState.parentId];
         var rect = canvasInner.getBoundingClientRect();
         var x1 = parent.x + BOARD / 2, y1 = parent.y + BOARD + 20;
-        var x2 = ev.clientX - rect.left, y2 = ev.clientY - rect.top;
+        var x2 = (ev.clientX - rect.left) / zoom, y2 = (ev.clientY - rect.top) / zoom;
         var midY = (y1 + y2) / 2;
         ghostPath.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
     }
@@ -675,8 +836,11 @@
 
     document.getElementById('btn-complete').addEventListener('click', function () {
         clearGoals();
+
+        var incomplete = findIncomplete();
+
         var leaves = Object.keys(nodes).map(function (id) { return nodes[id]; })
-            .filter(function (n) { return n.depth === 4 && n.col !== null && !n.invalid; });
+            .filter(function (n) { return n.depth === N && n.col !== null && !n.invalid; });
 
         var groups = {};
         leaves.forEach(function (n) {
@@ -684,17 +848,9 @@
             var sig = chain.map(function (a) { return a.col; }).join('-');
             (groups[sig] = groups[sig] || []).push(n);
         });
-
         var sigs = Object.keys(groups);
-        if (sigs.length === 0) {
-            statusBanner.className = 'status-banner show empty';
-            statusBanner.textContent = '아직 유효한 목표 상태(깊이 4, 규칙 위반 없음)를 완성하지 못했어요. 트리를 계속 확장해 보세요.';
-            render();
-            return;
-        }
-
         var dupCount = 0;
-        sigs.forEach(function (sig, i) {
+        sigs.forEach(function (sig) {
             groups[sig].forEach(function (n, j) {
                 n.goal = true;
                 if (j > 0) { n.dup = true; dupCount++; }
@@ -703,12 +859,27 @@
 
         render();
 
-        sigs.forEach(function (sig) {
-            var first = groups[sig][0];
-            fireConfetti(first);
-        });
+        if (incomplete.length > 0) {
+            statusBanner.className = 'status-banner show info';
+            statusBanner.textContent = '🔍 아직 확장하지 않았거나 퀸을 놓지 않은 가지가 있어요. 유효한 곳까지 트리를 끝까지 완성해 주세요.';
+            return;
+        }
 
-        var msg = '고유한 목표 상태 ' + sigs.length + '개를 찾았어요! 🎉';
+        if (sigs.length === 0) {
+            statusBanner.className = 'status-banner show empty';
+            statusBanner.textContent = '트리는 완성됐지만 유효한 목표 상태를 찾지 못했어요.';
+            return;
+        }
+
+        if (SOLUTIONS_COUNT && sigs.length < SOLUTIONS_COUNT) {
+            statusBanner.className = 'status-banner show info';
+            statusBanner.textContent = '목표 상태 ' + sigs.length + '개를 찾았어요. 가능한 목표 상태가 더 있어요 — 모두 찾아보세요!';
+            return;
+        }
+
+        sigs.forEach(function (sig) { fireConfetti(groups[sig][0]); });
+
+        var msg = '고유한 목표 상태 ' + sigs.length + '개를 ' + (SOLUTIONS_COUNT ? '모두 ' : '') + '찾았어요! 완벽해요! 🎉';
         if (dupCount > 0) msg += ' (같은 배치를 다시 만든 중복 ' + dupCount + '개는 "중복" 표시했어요)';
         statusBanner.className = 'status-banner show ok';
         statusBanner.textContent = msg;
