@@ -90,12 +90,13 @@
     .main-area { flex: 1; display: flex; min-height: 0; }
 
     /* ---------- Left: tree canvas ---------- */
-    .tree-panel { flex: 1.35; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--blue-light); }
+    .tree-panel { flex: 1.9; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--blue-light); }
     .canvas-outer {
         flex: 1; overflow: auto; position: relative;
         background: radial-gradient(circle at 1px 1px, rgba(28,96,239,0.10) 1px, transparent 0) 0 0 / 22px 22px, var(--white);
     }
-    .canvas-inner { position: relative; }
+    .canvas-scaler { position: relative; }
+    .canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
     .canvas-inner svg { position: absolute; top: 0; left: 0; pointer-events: none; }
 
     .rnode {
@@ -166,13 +167,38 @@
     .confirm-pop .yes { background: var(--red); color: #fff; }
     .confirm-pop .no { background: rgba(255,255,255,0.15); color: #fff; }
 
-    .hint {
-        flex-shrink: 0; border-top: 1px solid var(--blue-light); background: #fbfcff;
-        padding: 9px 16px; font-size: 11.5px; color: var(--text-muted); text-align: center;
+    .canvas-footer {
+        flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+        gap: 14px; flex-wrap: wrap; border-top: 1px solid var(--blue-light); background: #fbfcff;
+        padding: 9px 16px;
     }
+    .hint {
+        font-size: 11.5px; color: var(--text-muted); background: var(--white);
+        border: 1px solid var(--blue-light); padding: 4px 12px; border-radius: 999px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+    .zoom-bar {
+        flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+        background: var(--white); border: 1px solid var(--blue-light); border-radius: 999px;
+        padding: 6px 10px 6px 14px; box-shadow: 0 8px 22px rgba(28, 96, 239, 0.16);
+    }
+    .zoom-btn {
+        width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--blue-light);
+        background: var(--white); color: var(--blue); font-size: 15px; font-weight: 700;
+        line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .zoom-btn:hover { background: var(--blue-light); }
+    #zoom-slider { width: 90px; accent-color: var(--blue); }
+    #zoom-label { font-size: 11.5px; font-weight: 700; color: var(--text-muted); width: 34px; text-align: center; }
+    .zoom-fit {
+        font-family: var(--font-body); font-weight: 700; font-size: 11.5px; border: 1px solid var(--blue-light);
+        background: var(--white); color: var(--blue); border-radius: 999px; padding: 6px 12px;
+        cursor: pointer; white-space: nowrap;
+    }
+    .zoom-fit:hover { background: var(--blue-light); }
 
     /* ---------- Right: illustration panel ---------- */
-    .illust-panel { flex: 1; display: flex; flex-direction: column; padding: 18px; gap: 14px; background: #fbfcff; min-width: 220px; }
+    .illust-panel { flex: 0.85; display: flex; flex-direction: column; padding: 18px; gap: 14px; background: #fbfcff; min-width: 200px; }
     .illust-panel h2 { font-family: var(--font-title); font-size: 13px; margin: 0; color: var(--text); }
     .illust-scene {
         position: relative; flex: 1; min-height: 200px; border-radius: 16px; overflow: hidden;
@@ -240,11 +266,22 @@
     <div class="main-area">
         <div class="tree-panel">
             <div class="canvas-outer" id="canvas-outer">
-                <div class="canvas-inner" id="canvas-inner">
-                    <svg id="svg-layer"></svg>
+                <div class="canvas-scaler" id="canvas-scaler">
+                    <div class="canvas-inner" id="canvas-inner">
+                        <svg id="svg-layer"></svg>
+                    </div>
                 </div>
             </div>
-            <div class="hint" id="hint-text">보드 아래 파란 점을 드래그해서 다음 행동을 선택하면 자식 상태가 생깁니다 (우클릭: 상태 삭제)</div>
+            <div class="canvas-footer">
+                <div class="hint" id="hint-text">보드 아래 파란 점을 드래그해서 다음 행동을 선택하면 자식 상태가 생깁니다 (우클릭: 상태 삭제)</div>
+                <div class="zoom-bar">
+                    <button class="zoom-btn" id="zoom-out" title="축소">&minus;</button>
+                    <input type="range" id="zoom-slider" min="40" max="150" step="10" value="100">
+                    <span id="zoom-label">100%</span>
+                    <button class="zoom-btn" id="zoom-in" title="확대">+</button>
+                    <button class="zoom-fit" id="zoom-fit">전체 보기</button>
+                </div>
+            </div>
         </div>
         <div class="illust-panel">
             <h2 id="illust-title">선택한 상태</h2>
@@ -294,6 +331,7 @@
     makeRoot();
 
     var canvasOuter = document.getElementById('canvas-outer');
+    var canvasScaler = document.getElementById('canvas-scaler');
     var canvasInner = document.getElementById('canvas-inner');
     var svg = document.getElementById('svg-layer');
     var statusBanner = document.getElementById('status-banner');
@@ -302,9 +340,13 @@
     var btnFinish = document.getElementById('btn-finish');
     var btnReset = document.getElementById('btn-reset');
     var btnGrade = document.getElementById('btn-grade');
+    var zoomSlider = document.getElementById('zoom-slider');
+    var zoomLabel = document.getElementById('zoom-label');
 
     var BOARD_W = 220, BOARD_H = 78;
     var LEVEL_H = 130, SLOT_W = 246;
+    var zoom = 1;
+    var ZOOM_MIN = 0.4, ZOOM_MAX = 1.5;
 
     function ancestorChain(node) {
         var chain = [];
@@ -383,7 +425,7 @@
         }
         assign(nodes.root);
 
-        var outerW = canvasOuter.clientWidth;
+        var outerW = canvasOuter.clientWidth / zoom;
         var treeW = Math.max(slot.n * SLOT_W, SLOT_W);
         var innerW = Math.max(outerW, treeW + 160);
         var maxDepth = Math.max.apply(null, Object.keys(nodes).map(function (id) { return nodes[id].depth_; }));
@@ -393,9 +435,30 @@
 
         canvasInner.style.width = innerW + 'px';
         canvasInner.style.height = innerH + 'px';
+        canvasInner.style.transform = 'scale(' + zoom + ')';
+        canvasScaler.style.width = (innerW * zoom) + 'px';
+        canvasScaler.style.height = (innerH * zoom) + 'px';
         svg.setAttribute('width', innerW);
         svg.setAttribute('height', innerH);
     }
+
+    function setZoom(z) {
+        zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+        zoomSlider.value = Math.round(zoom * 100);
+        zoomLabel.textContent = Math.round(zoom * 100) + '%';
+        render();
+    }
+
+    document.getElementById('zoom-in').addEventListener('click', function () { setZoom(zoom + 0.1); });
+    document.getElementById('zoom-out').addEventListener('click', function () { setZoom(zoom - 0.1); });
+    zoomSlider.addEventListener('input', function () { setZoom(zoomSlider.value / 100); });
+    document.getElementById('zoom-fit').addEventListener('click', function () {
+        setZoom(1);
+        canvasOuter.scrollTop = 0;
+        setTimeout(function () {
+            canvasOuter.scrollLeft = (canvasScaler.scrollWidth - canvasOuter.clientWidth) / 2;
+        }, 0);
+    });
 
     function stateRows(state) {
         var L = [], R = [];
@@ -523,7 +586,9 @@
     function updateIllustration(state) {
         var scene = document.querySelector('.illust-scene');
         var w = scene.clientWidth || 300;
-        var leftX = w * 0.19, rightX = w * 0.81, boatLeftX = w * 0.34, boatRightX = w * 0.66;
+        var leftX = w * 0.19, rightX = w * 0.81;
+        // 강(river)이 42%~58% 구간에 있으므로 배는 항상 그 안에서만 움직이게 한다.
+        var boatLeftX = w * 0.445, boatRightX = w * 0.555;
 
         function place(el, side, laneOffset) {
             var x = (side === 'L' ? leftX : rightX) + laneOffset;
@@ -574,7 +639,7 @@
         var parent = nodes[dragState.parentId];
         var rect = canvasInner.getBoundingClientRect();
         var x1 = parent.x + BOARD_W / 2, y1 = parent.y + BOARD_H + 18;
-        var x2 = ev.clientX - rect.left, y2 = ev.clientY - rect.top;
+        var x2 = (ev.clientX - rect.left) / zoom, y2 = (ev.clientY - rect.top) / zoom;
         var midY = (y1 + y2) / 2;
         ghostPath.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
     }
@@ -606,8 +671,8 @@
         var rect = canvasInner.getBoundingClientRect();
         var pop = document.createElement('div');
         pop.className = 'choice-pop';
-        pop.style.left = (clientX - rect.left) + 'px';
-        pop.style.top = (clientY - rect.top) + 'px';
+        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
+        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
         var title = document.createElement('div');
         title.className = 'choice-title';
         title.textContent = '어떤 행동을 할까요?';
@@ -654,8 +719,8 @@
         var rect = canvasInner.getBoundingClientRect();
         var pop = document.createElement('div');
         pop.className = 'choice-pop';
-        pop.style.left = (clientX - rect.left) + 'px';
-        pop.style.top = (clientY - rect.top) + 'px';
+        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
+        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
         var title = document.createElement('div');
         title.className = 'choice-title';
         title.textContent = '🚫 이 상태가 왜 문제인가요?';
@@ -690,8 +755,8 @@
         var rect = canvasInner.getBoundingClientRect();
         var pop = document.createElement('div');
         pop.className = 'confirm-pop';
-        pop.style.left = (clientX - rect.left) + 'px';
-        pop.style.top = (clientY - rect.top) + 'px';
+        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
+        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
         pop.innerHTML = '<span>이 상태를 삭제할까요?</span>';
         var yes = document.createElement('button'); yes.className = 'yes'; yes.textContent = '삭제';
         yes.addEventListener('click', function () {
@@ -805,6 +870,69 @@
         render();
     });
 
+    // 교사용 숨김 기능: Ctrl + 우클릭으로 예시(정답) 트리를 바로 불러오기
+    function buildDemoNode(parentId, action) {
+        var parent = nodes[parentId];
+        var ancSts = ancestorStates(parent);
+        var opt = classify(parent.state, ancSts, action);
+        var id = 'n' + (++seq);
+        nodes[id] = { id: id, parentId: parentId, state: opt.state, kind: opt.kind, confirmed: true, x: 0, y: 0, children: [] };
+        parent.children.push(id);
+        return id;
+    }
+
+    function loadDemoTree() {
+        makeRoot();
+        phase = 'build';
+        selectedId = null;
+        clickSeq = [];
+        graded = false;
+        btnFinish.disabled = false;
+        seqFooter.classList.remove('show');
+        document.querySelector('.illust-panel').style.display = '';
+        document.querySelector('.tree-panel').style.flex = '1.9';
+        clearBanner();
+
+        var demoActions = ['sheep', 'farmer', 'wolf', 'sheep', 'cabbage', 'farmer', 'sheep'];
+        var cur = 'root';
+        demoActions.forEach(function (a) { cur = buildDemoNode(cur, a); });
+
+        selectedId = cur;
+        updateIllustration(nodes[cur].state);
+        render();
+        statusBanner.className = 'status-banner show ok';
+        statusBanner.textContent = '예시(정답) 트리를 불러왔어요. (교사용)';
+    }
+
+    btnFinish.addEventListener('contextmenu', function (ev) {
+        if (!ev.ctrlKey) return;
+        ev.preventDefault();
+        document.querySelectorAll('.choice-pop, .confirm-pop').forEach(function (p) { p.remove(); });
+        var pop = document.createElement('div');
+        pop.className = 'choice-pop';
+        pop.style.position = 'fixed';
+        pop.style.left = ev.clientX + 'px';
+        pop.style.top = ev.clientY + 'px';
+        var title = document.createElement('div');
+        title.className = 'choice-title';
+        title.textContent = '교사용';
+        pop.appendChild(title);
+        var btn = document.createElement('button');
+        btn.textContent = '예시 트리 불러오기';
+        btn.addEventListener('click', function () {
+            pop.remove();
+            loadDemoTree();
+        });
+        pop.appendChild(btn);
+        document.body.appendChild(pop);
+        setTimeout(function () {
+            document.addEventListener('pointerdown', function onAway(ev2) {
+                if (!pop.contains(ev2.target)) pop.remove();
+                document.removeEventListener('pointerdown', onAway);
+            });
+        }, 0);
+    });
+
     btnGrade.addEventListener('click', function () {
         if (phase !== 'grade' || graded) return;
         graded = true;
@@ -830,7 +958,7 @@
         btnFinish.disabled = false;
         seqFooter.classList.remove('show');
         document.querySelector('.illust-panel').style.display = '';
-        document.querySelector('.tree-panel').style.flex = '1.35';
+        document.querySelector('.tree-panel').style.flex = '1.9';
         clearBanner();
         updateIllustration(initialState());
         render();
