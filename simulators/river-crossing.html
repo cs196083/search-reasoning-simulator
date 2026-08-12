@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>강 건너기 상태공간 트리 만들기</title>
+<title>강 건너기 탐색 순서 클릭 연습</title>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
     @font-face {
@@ -77,7 +77,6 @@
     button.action:hover { background: var(--blue-light); }
     button.action.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
     button.action.primary:hover { background: #164fce; }
-    button.action:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .status-banner {
         display: none; padding: 9px 18px; font-size: 13px; font-weight: 700; text-align: center; flex-shrink: 0;
@@ -85,12 +84,7 @@
     .status-banner.show { display: block; }
     .status-banner.ok { background: var(--gold-light); color: #92700c; }
     .status-banner.bad { background: var(--red-light); color: #b91c1c; }
-    .status-banner.info { background: var(--blue-light); color: #1e4bb8; }
 
-    .main-area { flex: 1; display: flex; min-height: 0; }
-
-    /* ---------- Left: tree canvas ---------- */
-    .tree-panel { flex: 1.9; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--blue-light); }
     .canvas-outer {
         flex: 1; overflow: auto; position: relative;
         background: radial-gradient(circle at 1px 1px, rgba(28,96,239,0.10) 1px, transparent 0) 0 0 / 22px 22px, var(--white);
@@ -101,19 +95,18 @@
 
     .rnode {
         position: absolute;
-        width: 168px;
+        width: 150px;
         border-radius: 12px;
-        border: 2px solid var(--blue-light);
+        border: 2.5px solid var(--blue-light);
         background: var(--white);
-        box-shadow: 0 4px 10px rgba(28,96,239,0.10);
+        box-shadow: 0 3px 8px rgba(28,96,239,0.10);
         padding: 8px 10px;
         cursor: pointer;
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
     .rnode:hover { border-color: var(--blue); }
-    .rnode.selected { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
     .rnode.goal { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-light); }
-    .rnode.visited-seq:not(.goal) { background: var(--blue); }
+    .rnode.visited-seq:not(.goal) { background: var(--blue); border-color: var(--blue); }
     .rnode.visited-seq:not(.goal) .rc-action { color: #fff !important; }
     .rnode.visited-seq { box-shadow: 0 0 0 3px rgba(28,96,239,0.35); }
 
@@ -132,36 +125,6 @@
         font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 18px; height: 18px;
         display: flex; align-items: center; justify-content: center; padding: 0 4px; z-index: 4;
     }
-
-    .drag-handle {
-        position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
-        width: 18px; height: 18px; border-radius: 50%; background: var(--blue);
-        border: 2px solid var(--white); cursor: grab; z-index: 4; box-shadow: 0 2px 6px rgba(28,96,239,0.4);
-    }
-    .drag-handle:active { cursor: grabbing; }
-
-    .choice-pop, .confirm-pop {
-        position: absolute; z-index: 12; background: var(--text); color: var(--white);
-        border-radius: 10px; padding: 8px; font-size: 12px; box-shadow: 0 8px 22px rgba(0,0,0,0.28);
-        display: flex; flex-direction: column; gap: 4px; min-width: 190px;
-    }
-    .choice-pop .choice-title { font-size: 10.5px; color: #b9c4e6; padding: 0 4px 2px; }
-    .choice-pop button {
-        font-family: var(--font-body); font-weight: 700; font-size: 12px; text-align: left;
-        border: 0; border-radius: 6px; padding: 7px 9px; cursor: pointer; background: rgba(255,255,255,0.08); color: #fff;
-    }
-    .choice-pop button:hover { background: var(--blue); }
-    .choice-pop .choice-warn { font-size: 11px; color: #f6b8b8; padding: 0 4px 2px; }
-    .choice-pop button.wrong-pick { animation: shakeBtn 0.35s ease; background: var(--red) !important; }
-    @keyframes shakeBtn {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-4px); }
-        75% { transform: translateX(4px); }
-    }
-    .confirm-pop { flex-direction: row; align-items: center; gap: 8px; }
-    .confirm-pop button { font-family: var(--font-body); font-weight: 700; font-size: 11.5px; border: 0; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
-    .confirm-pop .yes { background: var(--red); color: #fff; }
-    .confirm-pop .no { background: rgba(255,255,255,0.15); color: #fff; }
 
     .canvas-footer {
         flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
@@ -193,48 +156,21 @@
     }
     .zoom-fit:hover { background: var(--blue-light); }
 
-    /* ---------- Right: illustration panel ---------- */
-    .illust-panel { flex: 0.85; display: flex; flex-direction: column; padding: 18px; gap: 14px; background: #fbfcff; min-width: 200px; }
-    .illust-panel h2 { font-family: var(--font-title); font-size: 13px; margin: 0; color: var(--text); }
-    .illust-scene {
-        position: relative; flex: 1; min-height: 200px; border-radius: 16px; overflow: hidden;
-        background: linear-gradient(180deg, #eaf2ff 0%, #dceaff 100%);
-        border: 1px solid var(--blue-light);
+    .footer {
+        flex-shrink: 0;
+        border-top: 1px solid var(--blue-light);
+        background: #fbfcff;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
     }
-    .illust-river {
-        position: absolute; left: 42%; top: 0; bottom: 0; width: 16%;
-        background: repeating-linear-gradient(180deg, #a9c8fa 0 10px, #93b9f5 10px 20px);
-    }
-    .illust-bank { position: absolute; top: 0; bottom: 0; width: 42%; }
-    .illust-bank.left { left: 0; background: #eaf7e4; }
-    .illust-bank.right { right: 0; background: #eaf7e4; }
-    .illust-bank-label {
-        position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-        font-size: 11px; font-weight: 700; color: #4b7a3d; background: rgba(255,255,255,0.8);
-        padding: 2px 8px; border-radius: 999px;
-    }
-    .illust-icon {
-        position: absolute; font-size: 30px; top: 55%; transform: translate(-50%, -50%);
-        transition: left 0.7s cubic-bezier(.4,0,.2,1), top 0.4s ease;
-        filter: drop-shadow(0 3px 4px rgba(0,0,0,0.18));
-    }
-    .illust-boat {
-        position: absolute; font-size: 34px; top: 50%; transform: translate(-50%, -50%) rotate(90deg);
-        transition: left 0.7s cubic-bezier(.4,0,.2,1);
-    }
-    .illust-caption { font-size: 12px; color: var(--text-muted); text-align: center; min-height: 18px; }
-
-    /* ---------- Grading footer ---------- */
-    .seq-footer {
-        display: none; flex-shrink: 0; border-top: 1px solid var(--blue-light); background: #fbfcff;
-        padding: 12px 18px; align-items: center; gap: 14px; flex-wrap: wrap;
-    }
-    .seq-footer.show { display: flex; }
-    .seq-footer .seq-label { font-size: 12px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .footer .seq-label { font-size: 12px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
     .seq-track { flex: 1; min-width: 160px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
     .seq-track .chip {
         background: var(--blue-light); color: var(--blue); border-radius: 999px; padding: 3px 10px;
-        font-weight: 700; font-size: 12.5px; font-family: var(--font-title);
+        font-weight: 700; font-size: 12px; font-family: var(--font-title); white-space: nowrap;
     }
     .seq-track .placeholder { color: #a9b3c7; font-weight: 400; font-size: 12.5px; }
 </style>
@@ -243,8 +179,8 @@
 <div class="app">
     <div class="topbar">
         <div>
-            <h1>강 건너기 상태공간 트리 만들기</h1>
-            <div class="sub">보드 아래 파란 점을 드래그해 다음 행동을 골라 자식 상태를 만들어 보세요.</div>
+            <h1>강 건너기 — 탐색 순서 클릭 연습</h1>
+            <div class="sub">노드를 깊이 우선 탐색 순서대로 클릭해서 목표 상태까지 도달해 보세요.</div>
             <div class="legend">
                 <span class="tag tag-init">● 초기 상태</span>
                 <span class="tag tag-forbid">● 금지 상태</span>
@@ -252,185 +188,133 @@
             </div>
         </div>
         <div class="controls">
-            <button class="action" id="btn-reset">초기화</button>
-            <button class="action primary" id="btn-finish">트리 완성</button>
-            <button class="action" id="btn-load-demo">정답 트리 불러오기</button>
+            <button class="action" id="btn-retry">다시 하기</button>
         </div>
     </div>
 
     <div class="status-banner" id="status-banner"></div>
 
-    <div class="main-area">
-        <div class="tree-panel">
-            <div class="canvas-outer" id="canvas-outer">
-                <div class="canvas-scaler" id="canvas-scaler">
-                    <div class="canvas-inner" id="canvas-inner">
-                        <svg id="svg-layer"></svg>
-                    </div>
-                </div>
+    <div class="canvas-outer" id="canvas-outer">
+        <div class="canvas-scaler" id="canvas-scaler">
+            <div class="canvas-inner" id="canvas-inner">
+                <svg id="svg-layer"></svg>
             </div>
-            <div class="canvas-footer">
-                <div class="hint" id="hint-text">보드 아래 파란 점을 드래그해서 다음 행동을 선택하면 자식 상태가 생깁니다 (우클릭: 상태 삭제)</div>
-                <div class="zoom-bar">
-                    <button class="zoom-btn" id="zoom-out" title="축소">&minus;</button>
-                    <input type="range" id="zoom-slider" min="40" max="150" step="10" value="100">
-                    <span id="zoom-label">100%</span>
-                    <button class="zoom-btn" id="zoom-in" title="확대">+</button>
-                    <button class="zoom-fit" id="zoom-fit">전체 보기</button>
-                </div>
-            </div>
-        </div>
-        <div class="illust-panel">
-            <h2 id="illust-title">선택한 상태</h2>
-            <div class="illust-scene">
-                <div class="illust-bank left"><span class="illust-bank-label">왼쪽 강가</span></div>
-                <div class="illust-river"></div>
-                <div class="illust-bank right"><span class="illust-bank-label">오른쪽 강가</span></div>
-                <span class="illust-boat" id="ic-boat">🚣</span>
-                <span class="illust-icon" id="ic-f" title="농부">🧑‍🌾</span>
-                <span class="illust-icon" id="ic-s" title="양">🐑</span>
-                <span class="illust-icon" id="ic-w" title="늑대">🐺</span>
-                <span class="illust-icon" id="ic-c" title="양배추">🥬</span>
-            </div>
-            <div class="illust-caption" id="illust-caption">트리에서 노드를 클릭하면 그 상태가 여기 표시돼요.</div>
         </div>
     </div>
 
-    <div class="seq-footer" id="seq-footer">
+    <div class="canvas-footer">
+        <div class="hint">노드를 순서대로 클릭하세요 (드래그 없이 클릭만 하면 됩니다)</div>
+        <div class="zoom-bar">
+            <button class="zoom-btn" id="zoom-out" title="축소">&minus;</button>
+            <input type="range" id="zoom-slider" min="40" max="150" step="10" value="100">
+            <span id="zoom-label">100%</span>
+            <button class="zoom-btn" id="zoom-in" title="확대">+</button>
+            <button class="zoom-fit" id="zoom-fit">전체 보기</button>
+        </div>
+    </div>
+
+    <div class="footer">
         <span class="seq-label">클릭한 순서</span>
-        <div class="seq-track" id="seq-track"><span class="placeholder">노드를 순서대로 클릭하세요</span></div>
-        <button class="action primary" id="btn-grade">채점하기</button>
+        <div class="seq-track" id="seq-track"><span class="placeholder">노드를 클릭하면 여기에 표시돼요</span></div>
     </div>
 </div>
 
 <script>
 (function () {
-    var ACTIONS = ['farmer', 'cabbage', 'sheep', 'wolf'];
     var ACTION_LABEL = { farmer: '농부만 건넌다', cabbage: '양배추를 옮긴다', sheep: '양을 옮긴다', wolf: '늑대를 옮긴다' };
-    var ACTION_KEY = { cabbage: 'c', sheep: 's', wolf: 'w' };
 
-    function flip(side) { return side === 'L' ? 'R' : 'L'; }
-    function sameState(a, b) { return a.boat === b.boat && a.s === b.s && a.w === b.w && a.c === b.c; }
-    function initialState() { return { boat: 'L', s: 'L', w: 'L', c: 'L' }; }
-    function isGoalState(st) { return st.boat === 'R' && st.s === 'R' && st.w === 'R' && st.c === 'R'; }
+    // 실제 강 건너기 규칙 엔진으로 뽑아낸 전체 상태공간 트리
+    // (즉시 원상복귀되는 가지만 생략, 두 대칭 정답 모두 포함).
+    // [로컬id, 부모 로컬id(0=초기 상태), 행동, 종류]
+    var TREE_DATA = [
+        [1, 0, 'farmer', 'wolf-sheep'], [2, 0, 'cabbage', 'wolf-sheep'], [3, 0, 'sheep', 'ok'],
+        [4, 3, 'farmer', 'ok'], [5, 4, 'cabbage', 'ok'], [6, 5, 'farmer', 'sheep-cabbage'],
+        [7, 5, 'sheep', 'ok'], [8, 7, 'farmer', 'wolf-sheep'], [9, 7, 'wolf', 'ok'],
+        [10, 9, 'farmer', 'ok'], [11, 10, 'sheep', 'goal'], [12, 9, 'cabbage', 'ok'],
+        [13, 12, 'farmer', 'sheep-cabbage'], [14, 12, 'sheep', 'ok'], [15, 14, 'farmer', 'wolf-sheep'],
+        [16, 4, 'wolf', 'ok'], [17, 16, 'farmer', 'wolf-sheep'], [18, 16, 'sheep', 'ok'],
+        [19, 18, 'farmer', 'sheep-cabbage'], [20, 18, 'cabbage', 'ok'], [21, 20, 'farmer', 'ok'],
+        [22, 21, 'sheep', 'goal'], [23, 20, 'wolf', 'ok'], [24, 23, 'farmer', 'wolf-sheep'],
+        [25, 23, 'sheep', 'ok'], [26, 25, 'farmer', 'sheep-cabbage'], [27, 0, 'wolf', 'sheep-cabbage']
+    ];
+    var GOAL_ID = 11; // 우선순위(농부→양배추→양→늑대) 순서로 처음 도달하는 목표 상태
 
-    var nodes = {};
-    var seq = 0;
-    var phase = 'build'; // 'build' | 'grade'
-    var selectedId = null;
-    var clickSeq = [];
+    var FORBID_BADGE = {
+        'wolf-sheep': '금지 상태 (양 & 늑대)',
+        'sheep-cabbage': '금지 상태 (양 & 양배추)'
+    };
 
-    function makeRoot() {
-        nodes = {};
-        seq = 0;
-        nodes.root = { id: 'root', parentId: null, state: initialState(), kind: 'ok', x: 0, y: 0, children: [] };
-    }
-    makeRoot();
+    var BOARD_W = 150, BOARD_H = 56;
+    var LEVEL_H = 100, SLOT_W = 172;
 
     var canvasOuter = document.getElementById('canvas-outer');
     var canvasScaler = document.getElementById('canvas-scaler');
     var canvasInner = document.getElementById('canvas-inner');
     var svg = document.getElementById('svg-layer');
     var statusBanner = document.getElementById('status-banner');
-    var seqFooter = document.getElementById('seq-footer');
     var seqTrack = document.getElementById('seq-track');
-    var btnFinish = document.getElementById('btn-finish');
-    var btnReset = document.getElementById('btn-reset');
-    var btnGrade = document.getElementById('btn-grade');
     var zoomSlider = document.getElementById('zoom-slider');
     var zoomLabel = document.getElementById('zoom-label');
 
-    var BOARD_W = 168, BOARD_H = 56;
-    var LEVEL_H = 108, SLOT_W = 192;
     var zoom = 1;
     var ZOOM_MIN = 0.4, ZOOM_MAX = 1.5;
 
-    function ancestorChain(node) {
-        var chain = [];
-        var cur = node;
-        while (cur && cur.parentId !== null) { chain.unshift(cur); cur = nodes[cur.parentId]; }
-        return chain;
-    }
-    function ancestorStates(node) {
-        // ancestorChain never includes the root itself (root.parentId is null),
-        // but the initial state is a real state a later action could legitimately repeat,
-        // so it must always be included in the "have we been here before" check.
-        return [nodes.root.state].concat(ancestorChain(node).map(function (n) { return n.state; }));
-    }
+    var nodes = {};
+    var visitedOrder = [];
+    var graded = false;
 
-    function classify(parentState, ancestorSts, action) {
-        var newState;
-        if (action === 'farmer') {
-            newState = { boat: flip(parentState.boat), s: parentState.s, w: parentState.w, c: parentState.c };
-        } else {
-            var key = ACTION_KEY[action];
-            var applicable = parentState[key] === parentState.boat;
-            if (!applicable) {
-                // 배가 있는 쪽에 없는 걸 옮기려는 것 — 실제로는 일어날 수 없는 행동이므로 변화없음으로 취급
-                return { action: action, state: parentState, kind: 'noop', label: ACTION_LABEL[action] };
-            }
-            newState = { boat: flip(parentState.boat), s: parentState.s, w: parentState.w, c: parentState.c };
-            newState[key] = flip(parentState[key]);
+    function buildTree() {
+        nodes = {};
+        nodes[0] = { id: 0, parentId: null, action: null, kind: 'init', children: [], x: 0, y: 0 };
+        TREE_DATA.forEach(function (entry) {
+            var id = entry[0], parent = entry[1], action = entry[2], kind = entry[3];
+            nodes[id] = { id: id, parentId: parent, action: action, kind: kind, children: [], x: 0, y: 0 };
+            nodes[parent].children.push(id);
+        });
+    }
+    buildTree();
+
+    function computeDfsPathTo(goalId) {
+        var path = [];
+        var found = false;
+        function visit(id) {
+            if (found) return;
+            path.push(id);
+            if (id === goalId) { found = true; return; }
+            nodes[id].children.forEach(function (c) { if (!found) visit(c); });
         }
-
-        var repeat = ancestorSts.concat([parentState]).some(function (s) { return sameState(s, newState); });
-        var farmerSide = newState.boat;
-        var unsafeWS = newState.s === newState.w && newState.s !== farmerSide;
-        var unsafeSC = newState.s === newState.c && newState.s !== farmerSide;
-
-        var kind;
-        if (repeat) kind = 'noop';
-        else if (unsafeWS) kind = 'wolf-sheep';
-        else if (unsafeSC) kind = 'sheep-cabbage';
-        else if (isGoalState(newState)) kind = 'goal';
-        else kind = 'ok';
-
-        return { action: action, state: newState, kind: kind, label: ACTION_LABEL[action] };
-    }
-
-    var FORBID_KINDS = {
-        noop: { badge: '금지 상태 (변화없음)' },
-        'wolf-sheep': { label: '양 & 늑대', badge: '금지 상태 (양 & 늑대)' },
-        'sheep-cabbage': { label: '양 & 양배추', badge: '금지 상태 (양 & 양배추)' }
-    };
-    // 학생이 직접 고르는 퀴즈 대상은 실제 안전 규칙 위반 두 가지뿐.
-    // "변화없음"(반복 상태·불가능한 행동)은 고를 필요 없이 자동 확정한다.
-    var QUIZ_KINDS = ['wolf-sheep', 'sheep-cabbage'];
-
-    function branchesFor(node) {
-        if (node.kind !== 'ok') return [];
-        var ancSts = ancestorStates(node);
-        return ACTIONS.map(function (a) { return classify(node.state, ancSts, a); });
+        visit(0);
+        return path;
     }
 
     // ---------- Layout ----------
     function layout() {
         var slot = { n: 0 };
-        function assign(node) {
+        function assign(id) {
+            var node = nodes[id];
             if (node.children.length === 0) { node.x = slot.n * SLOT_W; slot.n++; }
             else {
-                node.children.forEach(function (id) { assign(nodes[id]); });
-                var xs = node.children.map(function (id) { return nodes[id].x; });
+                node.children.forEach(assign);
+                var xs = node.children.map(function (c) { return nodes[c].x; });
                 node.x = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
             }
             node.y = node.depth_ * LEVEL_H;
         }
-        // compute depth via BFS
-        var depth = { root: 0 };
-        var q = ['root'];
+        var depth = { 0: 0 };
+        var q = [0];
         while (q.length) {
             var id = q.shift();
             nodes[id].depth_ = depth[id];
             nodes[id].children.forEach(function (c) { depth[c] = depth[id] + 1; q.push(c); });
         }
-        assign(nodes.root);
+        assign(0);
 
         var outerW = canvasOuter.clientWidth / zoom;
         var treeW = Math.max(slot.n * SLOT_W, SLOT_W);
-        var innerW = Math.max(outerW, treeW + 160);
+        var innerW = Math.max(outerW, treeW + 140);
         var maxDepth = Math.max.apply(null, Object.keys(nodes).map(function (id) { return nodes[id].depth_; }));
-        var innerH = (maxDepth + 1) * LEVEL_H + 60;
-        var offset = innerW / 2 - (nodes.root.x + BOARD_W / 2);
+        var innerH = (maxDepth + 1) * LEVEL_H + 50;
+        var offset = innerW / 2 - (nodes[0].x + BOARD_W / 2);
         Object.keys(nodes).forEach(function (id) { nodes[id].x += offset; });
 
         canvasInner.style.width = innerW + 'px';
@@ -448,38 +332,36 @@
         zoomLabel.textContent = Math.round(zoom * 100) + '%';
         render();
     }
-
     document.getElementById('zoom-in').addEventListener('click', function () { setZoom(zoom + 0.1); });
     document.getElementById('zoom-out').addEventListener('click', function () { setZoom(zoom - 0.1); });
     zoomSlider.addEventListener('input', function () { setZoom(zoomSlider.value / 100); });
-    function fitZoom() {
-        var neededW, neededH;
+    document.getElementById('zoom-fit').addEventListener('click', function () {
         var savedZoom = zoom;
         zoom = 1;
         layout();
-        neededW = parseFloat(canvasInner.style.width);
-        neededH = parseFloat(canvasInner.style.height);
+        var neededW = parseFloat(canvasInner.style.width);
+        var neededH = parseFloat(canvasInner.style.height);
         zoom = savedZoom;
-        var fit = Math.min(canvasOuter.clientWidth / neededW, canvasOuter.clientHeight / neededH, 1);
-        setZoom(fit);
+        setZoom(Math.min(canvasOuter.clientWidth / neededW, canvasOuter.clientHeight / neededH, 1));
         canvasOuter.scrollTop = 0;
         setTimeout(function () {
             canvasOuter.scrollLeft = (canvasScaler.scrollWidth - canvasOuter.clientWidth) / 2;
         }, 0);
-    }
-    document.getElementById('zoom-fit').addEventListener('click', fitZoom);
+    });
 
+    // ---------- Render ----------
     function render() {
         layout();
         canvasInner.querySelectorAll('.rnode').forEach(function (el) { el.remove(); });
         svg.innerHTML = '';
 
-        Object.keys(nodes).forEach(function (id) {
+        Object.keys(nodes).forEach(function (idStr) {
+            var id = Number(idStr);
             var node = nodes[id];
             if (node.parentId !== null) {
                 var parent = nodes[node.parentId];
-                var x1 = parent.x + BOARD_W / 2, y1 = parent.y + BOARD_H + 18;
-                var x2 = node.x + BOARD_W / 2, y2 = node.y + 18;
+                var x1 = parent.x + BOARD_W / 2, y1 = parent.y + BOARD_H + 16;
+                var x2 = node.x + BOARD_W / 2, y2 = node.y + 16;
                 var midY = (y1 + y2) / 2;
                 var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 path.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
@@ -493,489 +375,100 @@
     }
 
     function renderNode(node) {
-        var isForbidKind = node.kind === 'noop' || node.kind === 'wolf-sheep' || node.kind === 'sheep-cabbage';
         var el = document.createElement('div');
-        el.className = 'rnode' + (node.kind === 'goal' ? ' goal' : '') + (isForbidKind && node.confirmed ? ' forbid-confirmed' : '');
-        if (node.id === selectedId) el.classList.add('selected');
-        if (phase === 'grade' && clickSeq.indexOf(node.id) >= 0) el.classList.add('visited-seq');
+        var visitedIdx = visitedOrder.indexOf(node.id);
+        el.className = 'rnode' + (node.kind === 'goal' ? ' goal' : '') + (visitedIdx >= 0 ? ' visited-seq' : '');
         el.style.left = node.x + 'px';
-        el.style.top = (node.y + 18) + 'px';
+        el.style.top = (node.y + 16) + 'px';
         el.dataset.id = node.id;
 
-        if (node.id === 'root') {
+        if (node.kind === 'init') {
             var b = document.createElement('div');
             b.className = 'rc-badge tag-init';
             b.style.background = '#e2e8f0'; b.style.color = '#475569';
             b.textContent = '초기 상태';
             el.appendChild(b);
-        } else if (node.kind === 'goal') {
-            var gb = document.createElement('div');
-            gb.className = 'rc-badge tag-goal';
-            gb.style.background = '#fef3c7'; gb.style.color = '#92700c';
-            gb.textContent = '목표 상태';
-            el.appendChild(gb);
-        } else if (isForbidKind && node.confirmed) {
-            var fb = document.createElement('div');
-            fb.className = 'rc-badge tag-forbid';
-            fb.style.background = '#fee2e2'; fb.style.color = '#b91c1c';
-            fb.textContent = FORBID_KINDS[node.kind].badge;
-            el.appendChild(fb);
-        }
-
-        if (node.id !== 'root') {
+            var hint = document.createElement('div');
+            hint.className = 'rc-action muted';
+            hint.textContent = '농부, 양, 늑대, 양배추';
+            el.appendChild(hint);
+        } else {
+            if (node.kind === 'goal') {
+                var gb = document.createElement('div');
+                gb.className = 'rc-badge tag-goal';
+                gb.style.background = '#fef3c7'; gb.style.color = '#92700c';
+                gb.textContent = '목표 상태';
+                el.appendChild(gb);
+            } else if (node.kind !== 'ok') {
+                var fb = document.createElement('div');
+                fb.className = 'rc-badge tag-forbid';
+                fb.style.background = '#fee2e2'; fb.style.color = '#b91c1c';
+                fb.textContent = FORBID_BADGE[node.kind];
+                el.appendChild(fb);
+            }
             var actionText = document.createElement('div');
             actionText.className = 'rc-action';
             actionText.textContent = ACTION_LABEL[node.action];
             el.appendChild(actionText);
-        } else {
-            var rootHint = document.createElement('div');
-            rootHint.className = 'rc-action muted';
-            rootHint.textContent = '오른쪽 그림 참고';
-            el.appendChild(rootHint);
-        }
-
-        if (node.kind === 'goal') {
-            var goalText = document.createElement('div');
-            goalText.className = 'rc-forbid-text';
-            goalText.innerHTML = '🏁 목표 상태<span class="sub">모두 강을 건넜어요!</span>';
-            el.appendChild(goalText);
-        }
-
-        if (phase === 'grade') {
-            var idx = clickSeq.indexOf(node.id);
-            if (idx >= 0) {
-                var ob = document.createElement('div');
-                ob.className = 'order-badge';
-                ob.textContent = idx + 1;
-                el.appendChild(ob);
+            if (node.kind === 'goal') {
+                var goalText = document.createElement('div');
+                goalText.className = 'rc-forbid-text';
+                goalText.innerHTML = '🏁 목표 상태<span class="sub">모두 강을 건넜어요!</span>';
+                el.appendChild(goalText);
             }
         }
 
-        el.addEventListener('click', function (ev) {
-            if (phase === 'build') {
-                selectedId = node.id;
-                updateIllustration(node.state);
-                render();
-            } else {
-                onGradeClick(node.id);
-            }
-        });
-
-        if (phase === 'build') {
-            el.addEventListener('contextmenu', function (ev) {
-                if (node.id === 'root') return;
-                ev.preventDefault();
-                if (isForbidKind && !node.confirmed) {
-                    askClassify(node.id, node.kind, ev.clientX, ev.clientY);
-                } else {
-                    askDelete(node.id, ev.clientX, ev.clientY);
-                }
-            });
-            if (node.kind === 'ok') {
-                var handle = document.createElement('div');
-                handle.className = 'drag-handle';
-                handle.addEventListener('pointerdown', function (ev) { startDrag(node.id, ev); });
-                el.appendChild(handle);
-            }
+        if (visitedIdx >= 0) {
+            var ob = document.createElement('div');
+            ob.className = 'order-badge';
+            ob.textContent = visitedIdx + 1;
+            el.appendChild(ob);
         }
 
+        el.addEventListener('click', function () { onClickNode(node.id); });
         canvasInner.appendChild(el);
     }
 
-    // ---------- Illustration ----------
-    function updateIllustration(state) {
-        var scene = document.querySelector('.illust-scene');
-        var w = scene.clientWidth || 300;
-        var leftX = w * 0.19, rightX = w * 0.81;
-        // 강(river)이 42%~58% 구간에 있으므로 배는 항상 그 안에서만 움직이게 한다.
-        var boatLeftX = w * 0.445, boatRightX = w * 0.555;
-
-        function place(el, side, laneOffset) {
-            var x = (side === 'L' ? leftX : rightX) + laneOffset;
-            el.style.left = x + 'px';
+    function renderSeq() {
+        if (visitedOrder.length === 0) {
+            seqTrack.innerHTML = '<span class="placeholder">노드를 클릭하면 여기에 표시돼요</span>';
+            return;
         }
-        place(document.getElementById('ic-f'), state.boat, 0);
-        place(document.getElementById('ic-s'), state.s, -22);
-        place(document.getElementById('ic-w'), state.w, 22);
-        place(document.getElementById('ic-c'), state.c, 0);
-        document.getElementById('ic-s').style.top = '75%';
-        document.getElementById('ic-w').style.top = '75%';
-        document.getElementById('ic-c').style.top = '30%';
-        document.getElementById('ic-boat').style.left = (state.boat === 'L' ? boatLeftX : boatRightX) + 'px';
-
-        var caption = document.getElementById('illust-caption');
-        if (isGoalState(state)) caption.textContent = '🏁 모두 강을 건넜습니다! 목표 상태예요.';
-        else caption.textContent = (state.boat === 'L' ? '배가 왼쪽에 있어요.' : '배가 오른쪽에 있어요.');
+        seqTrack.innerHTML = visitedOrder.map(function (id, i) {
+            var label = id === 0 ? '초기 상태' : ACTION_LABEL[nodes[id].action];
+            return (i > 0 ? '<span class="arrow" style="color:#a9b3c7">→</span>' : '') + '<span class="chip">' + label + '</span>';
+        }).join('');
     }
 
-    // ---------- Interactions (build phase) ----------
-    var dragState = null, ghostPath = null;
-
-    function startDrag(parentId, ev) {
-        ev.preventDefault(); ev.stopPropagation();
-        var handle = ev.currentTarget;
-        dragState = { parentId: parentId, handle: handle };
-        try { handle.setPointerCapture(ev.pointerId); } catch (e) {}
-        ghostPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        ghostPath.setAttribute('stroke', '#94a3b8'); ghostPath.setAttribute('stroke-width', '2.5');
-        ghostPath.setAttribute('stroke-dasharray', '5,5'); ghostPath.setAttribute('fill', 'none');
-        svg.appendChild(ghostPath);
-        handle.addEventListener('pointermove', onDragMove);
-        handle.addEventListener('pointerup', onDragEnd);
-        window.addEventListener('pointermove', onDragMove);
-        window.addEventListener('pointerup', onDragEnd);
-    }
-
-    function autoScrollNearEdge(clientY) {
-        var rect = canvasOuter.getBoundingClientRect();
-        var margin = 50;
-        if (clientY < rect.top + margin) canvasOuter.scrollTop -= (margin - (clientY - rect.top)) * 0.5;
-        else if (clientY > rect.bottom - margin) canvasOuter.scrollTop += (margin - (rect.bottom - clientY)) * 0.5;
-    }
-
-    function onDragMove(ev) {
-        if (!dragState) return;
-        autoScrollNearEdge(ev.clientY);
-        var parent = nodes[dragState.parentId];
-        var rect = canvasInner.getBoundingClientRect();
-        var x1 = parent.x + BOARD_W / 2, y1 = parent.y + BOARD_H + 18;
-        var x2 = (ev.clientX - rect.left) / zoom, y2 = (ev.clientY - rect.top) / zoom;
-        var midY = (y1 + y2) / 2;
-        ghostPath.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
-    }
-
-    function onDragEnd(ev) {
-        var handle = dragState && dragState.handle;
-        if (handle) {
-            handle.removeEventListener('pointermove', onDragMove);
-            handle.removeEventListener('pointerup', onDragEnd);
-            try { handle.releasePointerCapture(ev.pointerId); } catch (e) {}
-        }
-        window.removeEventListener('pointermove', onDragMove);
-        window.removeEventListener('pointerup', onDragEnd);
-        if (ghostPath) { ghostPath.remove(); ghostPath = null; }
-        if (!dragState) return;
-        var parentId = dragState.parentId;
-        dragState = null;
-        var rect = canvasOuter.getBoundingClientRect();
-        var withinY = ev.clientY >= rect.top - 40 && ev.clientY <= rect.bottom + 400;
-        if (!withinY) return;
-        openChoiceMenu(parentId, ev.clientX, ev.clientY);
-    }
-
-    // 팝업이 캔버스(또는 창) 가장자리에서 잘리지 않도록 위치를 안쪽으로 밀어 넣는다.
-    // boundsRect가 없으면 현재 창(window) 기준으로 판단한다.
-    function clampPopupToBounds(pop, boundsRect) {
-        var bounds = boundsRect || { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
-        var pr = pop.getBoundingClientRect();
-        var margin = 8;
-        var shiftX = 0, shiftY = 0;
-        if (pr.right > bounds.right - margin) shiftX -= (pr.right - (bounds.right - margin));
-        if (pr.left + shiftX < bounds.left + margin) shiftX += ((bounds.left + margin) - (pr.left + shiftX));
-        if (pr.bottom > bounds.bottom - margin) shiftY -= (pr.bottom - (bounds.bottom - margin));
-        if (pr.top + shiftY < bounds.top + margin) shiftY += ((bounds.top + margin) - (pr.top + shiftY));
-        var z = pop.dataset.zoomAware === '1' ? zoom : 1;
-        if (shiftX !== 0) pop.style.left = (parseFloat(pop.style.left) + shiftX / z) + 'px';
-        if (shiftY !== 0) pop.style.top = (parseFloat(pop.style.top) + shiftY / z) + 'px';
-    }
-
-    function openChoiceMenu(parentId, clientX, clientY) {
-        document.querySelectorAll('.choice-pop, .confirm-pop').forEach(function (p) { p.remove(); });
-        var node = nodes[parentId];
-        var options = branchesFor(node);
-        if (options.length === 0) return;
-        var rect = canvasInner.getBoundingClientRect();
-        var pop = document.createElement('div');
-        pop.className = 'choice-pop';
-        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
-        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
-        var title = document.createElement('div');
-        title.className = 'choice-title';
-        title.textContent = '어떤 행동을 할까요?';
-        pop.appendChild(title);
-        options.forEach(function (opt) {
-            var btn = document.createElement('button');
-            btn.textContent = opt.label;
-            btn.addEventListener('click', function () {
-                var dropX = clientX, dropY = clientY;
-                pop.remove();
-                createChild(parentId, opt, dropX, dropY);
-            });
-            pop.appendChild(btn);
-        });
-        pop.dataset.zoomAware = '1';
-        canvasInner.appendChild(pop);
-        clampPopupToBounds(pop, canvasOuter.getBoundingClientRect());
-        setTimeout(function () {
-            document.addEventListener('pointerdown', function onAway(ev2) {
-                if (!pop.contains(ev2.target)) pop.remove();
-                document.removeEventListener('pointerdown', onAway);
-            });
-        }, 0);
-    }
-
-    function createChild(parentId, opt, dropX, dropY) {
-        var parent = nodes[parentId];
-        var id = 'n' + (++seq);
-        var needsQuiz = QUIZ_KINDS.indexOf(opt.kind) >= 0;
-        var node = { id: id, parentId: parentId, action: opt.action, state: opt.state, kind: opt.kind, confirmed: !needsQuiz, x: 0, y: 0, children: [] };
-        nodes[id] = node;
-        parent.children.push(id);
-        selectedId = id;
-        updateIllustration(opt.state);
-        clearBanner();
-        render();
-        if (needsQuiz) {
-            var el = canvasInner.querySelector('.rnode[data-id="' + id + '"]');
-            var r = el.getBoundingClientRect();
-            askClassify(id, opt.kind, r.left + r.width / 2, r.bottom + 8);
-        }
-    }
-
-    function askClassify(nodeId, trueKind, clientX, clientY) {
-        document.querySelectorAll('.confirm-pop, .choice-pop').forEach(function (p) { p.remove(); });
-        var rect = canvasInner.getBoundingClientRect();
-        var pop = document.createElement('div');
-        pop.className = 'choice-pop';
-        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
-        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
-        var title = document.createElement('div');
-        title.className = 'choice-title';
-        title.textContent = '🚫 이 상태가 왜 문제인가요?';
-        pop.appendChild(title);
-        var warn = document.createElement('div');
-        warn.className = 'choice-warn';
-        warn.textContent = '노드를 다시 보고 골라 보세요.';
-        pop.appendChild(warn);
-        QUIZ_KINDS.forEach(function (k) {
-            var btn = document.createElement('button');
-            btn.textContent = FORBID_KINDS[k].label;
-            btn.addEventListener('click', function () {
-                if (!nodes[nodeId]) { pop.remove(); return; }
-                if (k === trueKind) {
-                    nodes[nodeId].confirmed = true;
-                    pop.remove();
-                    clearBanner();
-                    render();
-                } else {
-                    btn.classList.remove('wrong-pick');
-                    void btn.offsetWidth;
-                    btn.classList.add('wrong-pick');
-                }
-            });
-            pop.appendChild(btn);
-        });
-        pop.dataset.zoomAware = '1';
-        canvasInner.appendChild(pop);
-        clampPopupToBounds(pop, canvasOuter.getBoundingClientRect());
-    }
-
-    function askDelete(nodeId, clientX, clientY) {
-        document.querySelectorAll('.confirm-pop, .choice-pop').forEach(function (p) { p.remove(); });
-        var rect = canvasInner.getBoundingClientRect();
-        var pop = document.createElement('div');
-        pop.className = 'confirm-pop';
-        pop.style.left = ((clientX - rect.left) / zoom) + 'px';
-        pop.style.top = ((clientY - rect.top) / zoom) + 'px';
-        pop.innerHTML = '<span>이 상태를 삭제할까요?</span>';
-        var yes = document.createElement('button'); yes.className = 'yes'; yes.textContent = '삭제';
-        yes.addEventListener('click', function () {
-            deleteNode(nodeId);
-            pop.remove();
-            document.querySelectorAll('.choice-pop').forEach(function (p) { p.remove(); });
-            render();
-        });
-        var no = document.createElement('button'); no.className = 'no'; no.textContent = '취소';
-        no.addEventListener('click', function () { pop.remove(); });
-        pop.appendChild(yes); pop.appendChild(no);
-        pop.dataset.zoomAware = '1';
-        canvasInner.appendChild(pop);
-        clampPopupToBounds(pop, canvasOuter.getBoundingClientRect());
-        setTimeout(function () {
-            document.addEventListener('pointerdown', function onAway(ev2) {
-                if (!pop.contains(ev2.target)) pop.remove();
-                document.removeEventListener('pointerdown', onAway);
-            });
-        }, 0);
-    }
-
-    function deleteNode(nodeId) {
-        var node = nodes[nodeId];
-        if (!node || node.id === 'root') return;
-        node.children.slice().forEach(deleteNode);
-        var parent = nodes[node.parentId];
-        parent.children = parent.children.filter(function (id) { return id !== nodeId; });
-        if (selectedId === nodeId) selectedId = null;
-        delete nodes[nodeId];
-    }
-
-    // ---------- Grading phase ----------
-    function computeCanonicalPath() {
-        var path = [];
-        var found = false;
-        function visit(id) {
-            if (found) return;
-            var node = nodes[id];
-            path.push(id);
-            if (node.kind === 'goal') { found = true; return; }
-            node.children.forEach(function (c) {
-                if (found) return;
-                var child = nodes[c];
-                if (child.kind === 'ok' || child.kind === 'goal') visit(c);
-            });
-        }
-        visit('root');
-        return path;
-    }
-
-    function onGradeClick(nodeId) {
+    function onClickNode(id) {
         if (graded) return;
-        if (clickSeq.indexOf(nodeId) >= 0) return;
-        clickSeq.push(nodeId);
-        renderSeqFooter();
+        if (visitedOrder.indexOf(id) >= 0) return;
+        visitedOrder.push(id);
+        renderSeq();
         render();
+        if (id === GOAL_ID) grade();
     }
 
-    var graded = false;
-
-    function renderSeqFooter() {
-        if (clickSeq.length === 0) {
-            seqTrack.innerHTML = '<span class="placeholder">노드를 순서대로 클릭하세요</span>';
-            return;
-        }
-        seqTrack.innerHTML = clickSeq.map(function (id, i) { return '<span class="chip">' + (i + 1) + '</span>'; }).join('<span style="color:#a9b3c7">→</span>');
-    }
-
-    function clearBanner() {
-        statusBanner.className = 'status-banner';
-        statusBanner.textContent = '';
-    }
-
-    function findUnconfirmed() {
-        return Object.keys(nodes).filter(function (id) {
-            var n = nodes[id];
-            return n.kind !== 'ok' && n.kind !== 'goal' && !n.confirmed;
-        });
-    }
-
-    btnFinish.addEventListener('click', function () {
-        if (phase !== 'build') return;
-
-        var unconfirmed = findUnconfirmed();
-        if (unconfirmed.length > 0) {
-            clearBanner();
-            statusBanner.className = 'status-banner show bad';
-            statusBanner.textContent = '아직 확인하지 않은 금지 상태가 있어요. 해당 노드를 우클릭해서 유형을 마저 골라 주세요.';
-            return;
-        }
-
-        var canonical = computeCanonicalPath();
-        var hasGoal = canonical.length > 0 && nodes[canonical[canonical.length - 1]].kind === 'goal';
-        if (!hasGoal) {
-            clearBanner();
-            statusBanner.className = 'status-banner show bad';
-            statusBanner.textContent = '이 트리는 목표 상태에 도달하지 못해요. 트리를 다시 만들어 주세요.';
-            return;
-        }
-
-        phase = 'grade';
-        selectedId = null;
-        clickSeq = [];
-        graded = false;
-        btnFinish.disabled = true;
-        seqFooter.classList.add('show');
-        document.querySelector('.illust-panel').style.display = 'none';
-        document.querySelector('.tree-panel').style.flex = '1';
-        clearBanner();
-        statusBanner.className = 'status-banner show info';
-        statusBanner.textContent = '이제 트리를 깊이 우선 탐색 순서대로 클릭해 보세요. 목표 상태까지 도달하면 "채점하기"를 누르세요.';
-        render();
-    });
-
-    // 교사용 숨김 기능: Ctrl + 우클릭으로 예시(정답) 트리를 바로 불러오기
-    function buildDemoNode(parentId, action) {
-        var parent = nodes[parentId];
-        var ancSts = ancestorStates(parent);
-        var opt = classify(parent.state, ancSts, action);
-        var id = 'n' + (++seq);
-        nodes[id] = { id: id, parentId: parentId, action: action, state: opt.state, kind: opt.kind, confirmed: true, x: 0, y: 0, children: [] };
-        parent.children.push(id);
-        return id;
-    }
-
-    // 실제 규칙 엔진으로 뽑아낸, 즉시-원상복귀(변화없음) 가지만 생략한
-    // 전체 정답 트리 (교과서 그림 I-11과 같은 방식 · 두 대칭 해 모두 포함).
-    // [로컬id, 부모 로컬id(0=초기 상태), 행동]
-    var FULL_DEMO_TREE = [
-        [1, 0, 'farmer'], [2, 0, 'cabbage'], [3, 0, 'sheep'], [4, 3, 'farmer'],
-        [5, 4, 'cabbage'], [6, 5, 'farmer'], [7, 5, 'sheep'], [8, 7, 'farmer'],
-        [9, 7, 'wolf'], [10, 9, 'farmer'], [11, 10, 'sheep'], [12, 9, 'cabbage'],
-        [13, 12, 'farmer'], [14, 12, 'sheep'], [15, 14, 'farmer'], [16, 4, 'wolf'],
-        [17, 16, 'farmer'], [18, 16, 'sheep'], [19, 18, 'farmer'], [20, 18, 'cabbage'],
-        [21, 20, 'farmer'], [22, 21, 'sheep'], [23, 20, 'wolf'], [24, 23, 'farmer'],
-        [25, 23, 'sheep'], [26, 25, 'farmer'], [27, 0, 'wolf']
-    ];
-
-    function loadDemoTree() {
-        makeRoot();
-        phase = 'build';
-        selectedId = null;
-        clickSeq = [];
-        graded = false;
-        btnFinish.disabled = false;
-        seqFooter.classList.remove('show');
-        document.querySelector('.illust-panel').style.display = '';
-        document.querySelector('.tree-panel').style.flex = '1.9';
-        clearBanner();
-
-        var localToReal = { 0: 'root' };
-        var lastGoal = 'root';
-        FULL_DEMO_TREE.forEach(function (entry) {
-            var localId = entry[0], parentLocal = entry[1], action = entry[2];
-            var realId = buildDemoNode(localToReal[parentLocal], action);
-            localToReal[localId] = realId;
-            if (nodes[realId].kind === 'goal') lastGoal = realId;
-        });
-        var cur = lastGoal;
-
-        selectedId = cur;
-        updateIllustration(nodes[cur].state);
-        render();
-        fitZoom();
-        statusBanner.className = 'status-banner show ok';
-        statusBanner.textContent = '정답 트리를 불러왔어요 — 두 가지 대칭 해답을 모두 포함합니다. 이제 "트리 완성"을 눌러 DFS 클릭 연습을 해보세요.';
-    }
-
-    document.getElementById('btn-load-demo').addEventListener('click', loadDemoTree);
-
-    btnGrade.addEventListener('click', function () {
-        if (phase !== 'grade' || graded) return;
+    function grade() {
         graded = true;
-        var canonical = computeCanonicalPath();
-        var isRight = canonical.length === clickSeq.length && canonical.every(function (id, i) { return id === clickSeq[i]; });
+        var correct = computeDfsPathTo(GOAL_ID);
+        var isRight = correct.length === visitedOrder.length && correct.every(function (id, i) { return id === visitedOrder[i]; });
         if (isRight) {
             statusBanner.className = 'status-banner show ok';
             statusBanner.textContent = '정답입니다! 깊이 우선 탐색 순서를 정확히 클릭했어요 🎉';
             if (typeof confetti === 'function') confetti({ particleCount: 90, spread: 70, origin: { x: 0.5, y: 0.4 } });
         } else {
             statusBanner.className = 'status-banner show bad';
-            statusBanner.textContent = '아쉬워요, 순서가 정확하지 않아요. (' + canonical.length + '단계 중 ' + clickSeq.length + '단계 클릭함) — 초기화 후 다시 시도해 보세요.';
+            statusBanner.textContent = '아쉬워요, 다시 도전해 보세요.';
         }
-        render();
-    });
+    }
 
-    btnReset.addEventListener('click', function () {
-        makeRoot();
-        phase = 'build';
-        selectedId = null;
-        clickSeq = [];
+    document.getElementById('btn-retry').addEventListener('click', function () {
+        visitedOrder = [];
         graded = false;
-        btnFinish.disabled = false;
-        seqFooter.classList.remove('show');
-        document.querySelector('.illust-panel').style.display = '';
-        document.querySelector('.tree-panel').style.flex = '1.9';
-        clearBanner();
-        updateIllustration(initialState());
+        statusBanner.className = 'status-banner';
+        statusBanner.textContent = '';
+        renderSeq();
         render();
     });
 
@@ -984,7 +477,7 @@
         new ResizeObserver(function () { render(); }).observe(canvasOuter);
     }
 
-    updateIllustration(initialState());
+    renderSeq();
     render();
 })();
 </script>
