@@ -297,29 +297,35 @@
         75% { transform: translateX(3px); }
     }
 
+    /* ---------- Canvas footer (hint + zoom, docked — never overlaps the grid) ---------- */
+
+    .canvas-footer {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 9px 18px;
+        border-top: 1px solid var(--blue-light);
+        background: #fbfcff;
+    }
+
     .hint {
-        position: absolute;
-        bottom: 60px;
-        left: 50%;
-        transform: translateX(-50%);
         font-size: 11.5px;
         color: var(--text-muted);
-        background: rgba(255,255,255,0.9);
+        background: var(--white);
         border: 1px solid var(--blue-light);
         padding: 4px 12px;
         border-radius: 999px;
         white-space: nowrap;
-        pointer-events: none;
-        z-index: 6;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 
-    /* ---------- Zoom bar ---------- */
-
     .zoom-bar {
-        position: absolute;
-        bottom: 14px;
-        left: 50%;
-        transform: translateX(-50%);
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -403,6 +409,9 @@
                 <svg id="svg-layer"></svg>
             </div>
         </div>
+    </div>
+
+    <div class="canvas-footer">
         <div class="hint" id="hint-text">보드 아래 파란 점을 드래그해 자식 보드를 만들고, 그 행의 칸을 클릭해 퀸을 놓아 보세요 (우클릭: 보드 삭제)</div>
         <div class="zoom-bar">
             <button class="zoom-btn" id="zoom-out" title="축소">&minus;</button>
