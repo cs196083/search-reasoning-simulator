@@ -100,7 +100,7 @@
 
     .rnode {
         position: absolute;
-        width: 150px;
+        width: 220px;
         border-radius: 12px;
         border: 2px solid var(--blue-light);
         background: var(--white);
@@ -122,9 +122,9 @@
         position: absolute; top: -10px; left: 8px; font-size: 10px; font-weight: 700;
         padding: 2px 8px; border-radius: 999px; white-space: nowrap; z-index: 3;
     }
-    .rc-row { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-muted); line-height: 1.5; }
-    .rc-side { font-weight: 700; color: var(--text); width: 34px; flex-shrink: 0; }
-    .rc-items { letter-spacing: 2px; font-weight: 700; color: var(--blue); }
+    .rc-row { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-muted); line-height: 1.5; white-space: nowrap; }
+    .rc-side { font-weight: 700; color: var(--text); width: 40px; flex-shrink: 0; }
+    .rc-items { letter-spacing: 1px; font-weight: 700; color: var(--blue); font-size: 11px; }
     .rc-forbid-text { display: none; font-size: 12px; font-weight: 700; color: #92700c; text-align: center; padding: 6px 0; }
     .rnode.goal .rc-forbid-text { display: block; }
     .rc-forbid-text .sub { display: block; font-size: 10.5px; font-weight: 400; color: #92700c; margin-top: 2px; }
@@ -303,8 +303,8 @@
     var btnReset = document.getElementById('btn-reset');
     var btnGrade = document.getElementById('btn-grade');
 
-    var BOARD_W = 150, BOARD_H = 78;
-    var LEVEL_H = 130, SLOT_W = 176;
+    var BOARD_W = 220, BOARD_H = 78;
+    var LEVEL_H = 130, SLOT_W = 246;
 
     function ancestorChain(node) {
         var chain = [];
@@ -400,11 +400,11 @@
     function stateRows(state) {
         var L = [], R = [];
         if (state.s === 'L') L.push('양'); else R.push('양');
-        if (state.w === 'L') L.push('늑'); else R.push('늑');
-        if (state.c === 'L') L.push('배'); else R.push('배');
+        if (state.w === 'L') L.push('늑대'); else R.push('늑대');
+        if (state.c === 'L') L.push('양배추'); else R.push('양배추');
         return {
-            left: (state.boat === 'L' ? '농 ' : '') + L.join(' '),
-            right: (state.boat === 'R' ? '농 ' : '') + R.join(' ')
+            left: (state.boat === 'L' ? '농부 ' : '') + L.join(' '),
+            right: (state.boat === 'R' ? '농부 ' : '') + R.join(' ')
         };
     }
 
@@ -502,7 +502,11 @@
             el.addEventListener('contextmenu', function (ev) {
                 if (node.id === 'root') return;
                 ev.preventDefault();
-                askDelete(node.id, ev.clientX, ev.clientY);
+                if (isForbidKind && !node.confirmed) {
+                    askClassify(node.id, node.kind, ev.clientX, ev.clientY);
+                } else {
+                    askDelete(node.id, ev.clientX, ev.clientY);
+                }
             });
             if (node.kind === 'ok') {
                 var handle = document.createElement('div');
@@ -760,10 +764,33 @@
         statusBanner.textContent = '';
     }
 
+    function findUnconfirmed() {
+        return Object.keys(nodes).filter(function (id) {
+            var n = nodes[id];
+            return n.kind !== 'ok' && n.kind !== 'goal' && !n.confirmed;
+        });
+    }
+
     btnFinish.addEventListener('click', function () {
         if (phase !== 'build') return;
+
+        var unconfirmed = findUnconfirmed();
+        if (unconfirmed.length > 0) {
+            clearBanner();
+            statusBanner.className = 'status-banner show bad';
+            statusBanner.textContent = '아직 확인하지 않은 금지 상태가 있어요. 해당 노드를 우클릭해서 유형을 마저 골라 주세요.';
+            return;
+        }
+
         var canonical = computeCanonicalPath();
         var hasGoal = canonical.length > 0 && nodes[canonical[canonical.length - 1]].kind === 'goal';
+        if (!hasGoal) {
+            clearBanner();
+            statusBanner.className = 'status-banner show bad';
+            statusBanner.textContent = '이 트리는 목표 상태에 도달하지 못해요. 트리를 다시 만들어 주세요.';
+            return;
+        }
+
         phase = 'grade';
         selectedId = null;
         clickSeq = [];
@@ -774,9 +801,7 @@
         document.querySelector('.tree-panel').style.flex = '1';
         clearBanner();
         statusBanner.className = 'status-banner show info';
-        statusBanner.textContent = hasGoal
-            ? '이제 트리를 깊이 우선 탐색 순서대로 클릭해 보세요. 목표 상태까지 도달하면 "채점하기"를 누르세요.'
-            : '이 트리에는 목표 상태로 이어지는 가지가 없어요. "채점하기"를 누르면 만든 노드 전체 순서로 채점합니다.';
+        statusBanner.textContent = '이제 트리를 깊이 우선 탐색 순서대로 클릭해 보세요. 목표 상태까지 도달하면 "채점하기"를 누르세요.';
         render();
     });
 
