@@ -24,6 +24,13 @@
         });
     });
 
+    document.querySelectorAll('[data-accordion-trigger]').forEach(function (trigger) {
+        trigger.addEventListener('click', function () {
+            if (trigger.disabled) return;
+            trigger.closest('[data-accordion-item]').classList.toggle('open');
+        });
+    });
+
     var initial = (location.hash || '').replace('#', '');
     var initialBtn = document.querySelector('.tab-btn[data-tab="' + initial + '"]');
     if (initialBtn && !initialBtn.classList.contains('disabled')) {

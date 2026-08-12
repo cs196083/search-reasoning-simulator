@@ -284,7 +284,8 @@ main {
 .ring-dl {
     inset: 34%;
     background: var(--blue);
-    padding-top: 26%;
+    align-items: center;
+    padding-top: 0;
 }
 
 .ring-label {
@@ -400,6 +401,160 @@ main {
     min-height: 640px;
     border: 0;
     display: block;
+}
+
+/* ---------- Accordion (탐색 트리) ---------- */
+
+.accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.accordion-item {
+    background: var(--white);
+    border: 1px solid var(--blue-light);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(28, 96, 239, 0.06);
+}
+
+.accordion-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 22px;
+    background: var(--white);
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-body);
+}
+
+.accordion-trigger:hover:not(:disabled) {
+    background: var(--blue-light);
+}
+
+.accordion-trigger:disabled {
+    cursor: not-allowed;
+    color: #a9b3c7;
+}
+
+.accordion-trigger-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.accordion-trigger-title .kr {
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text);
+}
+
+.accordion-trigger:disabled .accordion-trigger-title .kr {
+    color: #a9b3c7;
+}
+
+.accordion-trigger-title .en {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    background: var(--blue-light);
+    padding: 3px 10px;
+    border-radius: 999px;
+}
+
+.accordion-trigger:disabled .accordion-trigger-title .en {
+    color: #a9b3c7;
+    background: #eef1f8;
+}
+
+.accordion-chevron {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--blue);
+    border-bottom: 2px solid var(--blue);
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.accordion-item.open .accordion-chevron {
+    transform: rotate(-135deg);
+}
+
+.accordion-trigger:disabled .accordion-chevron {
+    border-color: #c3cce3;
+}
+
+.accordion-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.28s ease;
+    background: #fbfcff;
+}
+
+.accordion-item.open .accordion-panel {
+    max-height: 2400px;
+}
+
+.accordion-body {
+    padding: 4px 24px 26px;
+    border-top: 1px solid var(--blue-light);
+    padding-top: 20px;
+}
+
+.rule-block {
+    background: var(--white);
+    border: 1px solid var(--blue-light);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+}
+
+.rule-block h4 {
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--blue);
+    margin: 0 0 10px;
+}
+
+.rule-block ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.rule-block li {
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--text-muted);
+}
+
+.rule-block li strong {
+    color: var(--text);
+}
+
+.rule-example {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.rule-example .col-tag {
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    background: var(--blue-light);
+    padding: 3px 9px;
+    border-radius: 6px;
 }
 
 /* ---------- Footer ---------- */
