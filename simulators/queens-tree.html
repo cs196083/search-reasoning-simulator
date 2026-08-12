@@ -608,19 +608,35 @@
     function startDrag(parentId, ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        dragState = { parentId: parentId };
+        var handle = ev.currentTarget;
+        dragState = { parentId: parentId, handle: handle };
+        try { handle.setPointerCapture(ev.pointerId); } catch (e) {}
         ghostPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         ghostPath.setAttribute('stroke', '#94a3b8');
         ghostPath.setAttribute('stroke-width', '2.5');
         ghostPath.setAttribute('stroke-dasharray', '5,5');
         ghostPath.setAttribute('fill', 'none');
         svg.appendChild(ghostPath);
+        handle.addEventListener('pointermove', onDragMove);
+        handle.addEventListener('pointerup', onDragEnd);
+        // 캡처가 안 되는 환경(일부 자동화 도구 등)을 대비한 백업 리스너
         window.addEventListener('pointermove', onDragMove);
         window.addEventListener('pointerup', onDragEnd);
     }
 
+    function autoScrollNearEdge(clientY) {
+        var rect = canvasOuter.getBoundingClientRect();
+        var margin = 50;
+        if (clientY < rect.top + margin) {
+            canvasOuter.scrollTop -= (margin - (clientY - rect.top)) * 0.5;
+        } else if (clientY > rect.bottom - margin) {
+            canvasOuter.scrollTop += (margin - (rect.bottom - clientY)) * 0.5;
+        }
+    }
+
     function onDragMove(ev) {
         if (!dragState) return;
+        autoScrollNearEdge(ev.clientY);
         var parent = nodes[dragState.parentId];
         var rect = canvasInner.getBoundingClientRect();
         var x1 = parent.x + BOARD / 2, y1 = parent.y + BOARD + 20;
@@ -630,6 +646,12 @@
     }
 
     function onDragEnd(ev) {
+        var handle = dragState && dragState.handle;
+        if (handle) {
+            handle.removeEventListener('pointermove', onDragMove);
+            handle.removeEventListener('pointerup', onDragEnd);
+            try { handle.releasePointerCapture(ev.pointerId); } catch (e) {}
+        }
         window.removeEventListener('pointermove', onDragMove);
         window.removeEventListener('pointerup', onDragEnd);
         if (ghostPath) { ghostPath.remove(); ghostPath = null; }
@@ -638,8 +660,9 @@
         dragState = null;
 
         var rect = canvasOuter.getBoundingClientRect();
-        var within = ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
-        if (within) addChild(parentId, ev.clientX);
+        var clampedX = Math.min(Math.max(ev.clientX, rect.left), rect.right);
+        var withinY = ev.clientY >= rect.top - 40 && ev.clientY <= rect.bottom + 400;
+        if (withinY) addChild(parentId, clampedX);
     }
 
     // ---------- Complete / validation ----------
