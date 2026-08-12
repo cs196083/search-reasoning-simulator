@@ -254,6 +254,7 @@
         <div class="controls">
             <button class="action" id="btn-reset">초기화</button>
             <button class="action primary" id="btn-finish">트리 완성</button>
+            <button class="action" id="btn-load-demo">정답 트리 불러오기</button>
         </div>
     </div>
 
@@ -388,10 +389,13 @@
     }
 
     var FORBID_KINDS = {
-        noop: { label: '변화없음', badge: '금지 상태 (변화없음)' },
+        noop: { badge: '금지 상태 (변화없음)' },
         'wolf-sheep': { label: '양 & 늑대', badge: '금지 상태 (양 & 늑대)' },
         'sheep-cabbage': { label: '양 & 양배추', badge: '금지 상태 (양 & 양배추)' }
     };
+    // 학생이 직접 고르는 퀴즈 대상은 실제 안전 규칙 위반 두 가지뿐.
+    // "변화없음"(반복 상태·불가능한 행동)은 고를 필요 없이 자동 확정한다.
+    var QUIZ_KINDS = ['wolf-sheep', 'sheep-cabbage'];
 
     function branchesFor(node) {
         if (node.kind !== 'ok') return [];
@@ -713,15 +717,15 @@
     function createChild(parentId, opt, dropX, dropY) {
         var parent = nodes[parentId];
         var id = 'n' + (++seq);
-        var isForbidden = opt.kind !== 'ok' && opt.kind !== 'goal';
-        var node = { id: id, parentId: parentId, action: opt.action, state: opt.state, kind: opt.kind, confirmed: !isForbidden, x: 0, y: 0, children: [] };
+        var needsQuiz = QUIZ_KINDS.indexOf(opt.kind) >= 0;
+        var node = { id: id, parentId: parentId, action: opt.action, state: opt.state, kind: opt.kind, confirmed: !needsQuiz, x: 0, y: 0, children: [] };
         nodes[id] = node;
         parent.children.push(id);
         selectedId = id;
         updateIllustration(opt.state);
         clearBanner();
         render();
-        if (isForbidden) {
+        if (needsQuiz) {
             var el = canvasInner.querySelector('.rnode[data-id="' + id + '"]');
             var r = el.getBoundingClientRect();
             askClassify(id, opt.kind, r.left + r.width / 2, r.bottom + 8);
@@ -743,7 +747,7 @@
         warn.className = 'choice-warn';
         warn.textContent = '노드를 다시 보고 골라 보세요.';
         pop.appendChild(warn);
-        Object.keys(FORBID_KINDS).forEach(function (k) {
+        QUIZ_KINDS.forEach(function (k) {
             var btn = document.createElement('button');
             btn.textContent = FORBID_KINDS[k].label;
             btn.addEventListener('click', function () {
@@ -939,38 +943,10 @@
         render();
         fitZoom();
         statusBanner.className = 'status-banner show ok';
-        statusBanner.textContent = '예시(정답) 트리를 불러왔어요. (교사용) — 두 가지 대칭 해답을 모두 포함합니다.';
+        statusBanner.textContent = '정답 트리를 불러왔어요 — 두 가지 대칭 해답을 모두 포함합니다. 이제 "트리 완성"을 눌러 DFS 클릭 연습을 해보세요.';
     }
 
-    btnFinish.addEventListener('contextmenu', function (ev) {
-        if (!ev.ctrlKey) return;
-        ev.preventDefault();
-        document.querySelectorAll('.choice-pop, .confirm-pop').forEach(function (p) { p.remove(); });
-        var pop = document.createElement('div');
-        pop.className = 'choice-pop';
-        pop.style.position = 'fixed';
-        pop.style.left = ev.clientX + 'px';
-        pop.style.top = ev.clientY + 'px';
-        var title = document.createElement('div');
-        title.className = 'choice-title';
-        title.textContent = '교사용';
-        pop.appendChild(title);
-        var btn = document.createElement('button');
-        btn.textContent = '예시 트리 불러오기';
-        btn.addEventListener('click', function () {
-            pop.remove();
-            loadDemoTree();
-        });
-        pop.appendChild(btn);
-        document.body.appendChild(pop);
-        clampPopupToBounds(pop);
-        setTimeout(function () {
-            document.addEventListener('pointerdown', function onAway(ev2) {
-                if (!pop.contains(ev2.target)) pop.remove();
-                document.removeEventListener('pointerdown', onAway);
-            });
-        }, 0);
-    });
+    document.getElementById('btn-load-demo').addEventListener('click', loadDemoTree);
 
     btnGrade.addEventListener('click', function () {
         if (phase !== 'grade' || graded) return;
