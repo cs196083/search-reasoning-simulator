@@ -101,7 +101,7 @@
 
     .rnode {
         position: absolute;
-        width: 220px;
+        width: 168px;
         border-radius: 12px;
         border: 2px solid var(--blue-light);
         background: var(--white);
@@ -114,22 +114,18 @@
     .rnode.selected { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
     .rnode.goal { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-light); }
     .rnode.visited-seq:not(.goal) { background: var(--blue); }
-    .rnode.visited-seq:not(.goal) .rc-row,
-    .rnode.visited-seq:not(.goal) .rc-side,
-    .rnode.visited-seq:not(.goal) .rc-items { color: #fff !important; }
+    .rnode.visited-seq:not(.goal) .rc-action { color: #fff !important; }
     .rnode.visited-seq { box-shadow: 0 0 0 3px rgba(28,96,239,0.35); }
 
     .rc-badge {
         position: absolute; top: -10px; left: 8px; font-size: 10px; font-weight: 700;
         padding: 2px 8px; border-radius: 999px; white-space: nowrap; z-index: 3;
     }
-    .rc-row { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-muted); line-height: 1.5; white-space: nowrap; }
-    .rc-side { font-weight: 700; color: var(--text); width: 40px; flex-shrink: 0; }
-    .rc-items { letter-spacing: 1px; font-weight: 700; color: var(--blue); font-size: 11px; }
-    .rc-forbid-text { display: none; font-size: 12px; font-weight: 700; color: #92700c; text-align: center; padding: 6px 0; }
+    .rc-action { font-size: 13px; font-weight: 700; color: var(--text); text-align: center; padding: 8px 2px; line-height: 1.4; white-space: nowrap; }
+    .rc-action.muted { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .rc-forbid-text { display: none; font-size: 12px; font-weight: 700; color: #92700c; text-align: center; padding: 2px 0 6px; }
     .rnode.goal .rc-forbid-text { display: block; }
     .rc-forbid-text .sub { display: block; font-size: 10.5px; font-weight: 400; color: #92700c; margin-top: 2px; }
-    .rnode.goal .rc-row { display: none; }
 
     .order-badge {
         position: absolute; top: -10px; right: -8px; background: var(--text); color: var(--white);
@@ -343,8 +339,8 @@
     var zoomSlider = document.getElementById('zoom-slider');
     var zoomLabel = document.getElementById('zoom-label');
 
-    var BOARD_W = 220, BOARD_H = 78;
-    var LEVEL_H = 130, SLOT_W = 246;
+    var BOARD_W = 168, BOARD_H = 56;
+    var LEVEL_H = 108, SLOT_W = 192;
     var zoom = 1;
     var ZOOM_MIN = 0.4, ZOOM_MAX = 1.5;
 
@@ -452,24 +448,22 @@
     document.getElementById('zoom-in').addEventListener('click', function () { setZoom(zoom + 0.1); });
     document.getElementById('zoom-out').addEventListener('click', function () { setZoom(zoom - 0.1); });
     zoomSlider.addEventListener('input', function () { setZoom(zoomSlider.value / 100); });
-    document.getElementById('zoom-fit').addEventListener('click', function () {
-        setZoom(1);
+    function fitZoom() {
+        var neededW, neededH;
+        var savedZoom = zoom;
+        zoom = 1;
+        layout();
+        neededW = parseFloat(canvasInner.style.width);
+        neededH = parseFloat(canvasInner.style.height);
+        zoom = savedZoom;
+        var fit = Math.min(canvasOuter.clientWidth / neededW, canvasOuter.clientHeight / neededH, 1);
+        setZoom(fit);
         canvasOuter.scrollTop = 0;
         setTimeout(function () {
             canvasOuter.scrollLeft = (canvasScaler.scrollWidth - canvasOuter.clientWidth) / 2;
         }, 0);
-    });
-
-    function stateRows(state) {
-        var L = [], R = [];
-        if (state.s === 'L') L.push('양'); else R.push('양');
-        if (state.w === 'L') L.push('늑대'); else R.push('늑대');
-        if (state.c === 'L') L.push('양배추'); else R.push('양배추');
-        return {
-            left: (state.boat === 'L' ? '농부 ' : '') + L.join(' '),
-            right: (state.boat === 'R' ? '농부 ' : '') + R.join(' ')
-        };
     }
+    document.getElementById('zoom-fit').addEventListener('click', fitZoom);
 
     function render() {
         layout();
@@ -524,15 +518,17 @@
             el.appendChild(fb);
         }
 
-        var rows = stateRows(node.state);
-        var rowL = document.createElement('div');
-        rowL.className = 'rc-row';
-        rowL.innerHTML = '<span class="rc-side">왼쪽</span><span class="rc-items">' + (rows.left || '-') + '</span>';
-        var rowR = document.createElement('div');
-        rowR.className = 'rc-row';
-        rowR.innerHTML = '<span class="rc-side">오른쪽</span><span class="rc-items">' + (rows.right || '-') + '</span>';
-        el.appendChild(rowL);
-        el.appendChild(rowR);
+        if (node.id !== 'root') {
+            var actionText = document.createElement('div');
+            actionText.className = 'rc-action';
+            actionText.textContent = ACTION_LABEL[node.action];
+            el.appendChild(actionText);
+        } else {
+            var rootHint = document.createElement('div');
+            rootHint.className = 'rc-action muted';
+            rootHint.textContent = '오른쪽 그림 참고';
+            el.appendChild(rootHint);
+        }
 
         if (node.kind === 'goal') {
             var goalText = document.createElement('div');
@@ -663,6 +659,22 @@
         openChoiceMenu(parentId, ev.clientX, ev.clientY);
     }
 
+    // 팝업이 캔버스(또는 창) 가장자리에서 잘리지 않도록 위치를 안쪽으로 밀어 넣는다.
+    // boundsRect가 없으면 현재 창(window) 기준으로 판단한다.
+    function clampPopupToBounds(pop, boundsRect) {
+        var bounds = boundsRect || { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+        var pr = pop.getBoundingClientRect();
+        var margin = 8;
+        var shiftX = 0, shiftY = 0;
+        if (pr.right > bounds.right - margin) shiftX -= (pr.right - (bounds.right - margin));
+        if (pr.left + shiftX < bounds.left + margin) shiftX += ((bounds.left + margin) - (pr.left + shiftX));
+        if (pr.bottom > bounds.bottom - margin) shiftY -= (pr.bottom - (bounds.bottom - margin));
+        if (pr.top + shiftY < bounds.top + margin) shiftY += ((bounds.top + margin) - (pr.top + shiftY));
+        var z = pop.dataset.zoomAware === '1' ? zoom : 1;
+        if (shiftX !== 0) pop.style.left = (parseFloat(pop.style.left) + shiftX / z) + 'px';
+        if (shiftY !== 0) pop.style.top = (parseFloat(pop.style.top) + shiftY / z) + 'px';
+    }
+
     function openChoiceMenu(parentId, clientX, clientY) {
         document.querySelectorAll('.choice-pop, .confirm-pop').forEach(function (p) { p.remove(); });
         var node = nodes[parentId];
@@ -687,7 +699,9 @@
             });
             pop.appendChild(btn);
         });
+        pop.dataset.zoomAware = '1';
         canvasInner.appendChild(pop);
+        clampPopupToBounds(pop, canvasOuter.getBoundingClientRect());
         setTimeout(function () {
             document.addEventListener('pointerdown', function onAway(ev2) {
                 if (!pop.contains(ev2.target)) pop.remove();
@@ -700,7 +714,7 @@
         var parent = nodes[parentId];
         var id = 'n' + (++seq);
         var isForbidden = opt.kind !== 'ok' && opt.kind !== 'goal';
-        var node = { id: id, parentId: parentId, state: opt.state, kind: opt.kind, confirmed: !isForbidden, x: 0, y: 0, children: [] };
+        var node = { id: id, parentId: parentId, action: opt.action, state: opt.state, kind: opt.kind, confirmed: !isForbidden, x: 0, y: 0, children: [] };
         nodes[id] = node;
         parent.children.push(id);
         selectedId = id;
@@ -747,7 +761,9 @@
             });
             pop.appendChild(btn);
         });
+        pop.dataset.zoomAware = '1';
         canvasInner.appendChild(pop);
+        clampPopupToBounds(pop, canvasOuter.getBoundingClientRect());
     }
 
     function askDelete(nodeId, clientX, clientY) {
@@ -768,7 +784,9 @@
         var no = document.createElement('button'); no.className = 'no'; no.textContent = '취소';
         no.addEventListener('click', function () { pop.remove(); });
         pop.appendChild(yes); pop.appendChild(no);
+        pop.dataset.zoomAware = '1';
         canvasInner.appendChild(pop);
+        clampPopupToBounds(pop, canvasOuter.getBoundingClientRect());
         setTimeout(function () {
             document.addEventListener('pointerdown', function onAway(ev2) {
                 if (!pop.contains(ev2.target)) pop.remove();
@@ -876,10 +894,23 @@
         var ancSts = ancestorStates(parent);
         var opt = classify(parent.state, ancSts, action);
         var id = 'n' + (++seq);
-        nodes[id] = { id: id, parentId: parentId, state: opt.state, kind: opt.kind, confirmed: true, x: 0, y: 0, children: [] };
+        nodes[id] = { id: id, parentId: parentId, action: action, state: opt.state, kind: opt.kind, confirmed: true, x: 0, y: 0, children: [] };
         parent.children.push(id);
         return id;
     }
+
+    // 실제 규칙 엔진으로 뽑아낸, 즉시-원상복귀(변화없음) 가지만 생략한
+    // 전체 정답 트리 (교과서 그림 I-11과 같은 방식 · 두 대칭 해 모두 포함).
+    // [로컬id, 부모 로컬id(0=초기 상태), 행동]
+    var FULL_DEMO_TREE = [
+        [1, 0, 'farmer'], [2, 0, 'cabbage'], [3, 0, 'sheep'], [4, 3, 'farmer'],
+        [5, 4, 'cabbage'], [6, 5, 'farmer'], [7, 5, 'sheep'], [8, 7, 'farmer'],
+        [9, 7, 'wolf'], [10, 9, 'farmer'], [11, 10, 'sheep'], [12, 9, 'cabbage'],
+        [13, 12, 'farmer'], [14, 12, 'sheep'], [15, 14, 'farmer'], [16, 4, 'wolf'],
+        [17, 16, 'farmer'], [18, 16, 'sheep'], [19, 18, 'farmer'], [20, 18, 'cabbage'],
+        [21, 20, 'farmer'], [22, 21, 'sheep'], [23, 20, 'wolf'], [24, 23, 'farmer'],
+        [25, 23, 'sheep'], [26, 25, 'farmer'], [27, 0, 'wolf']
+    ];
 
     function loadDemoTree() {
         makeRoot();
@@ -893,15 +924,22 @@
         document.querySelector('.tree-panel').style.flex = '1.9';
         clearBanner();
 
-        var demoActions = ['sheep', 'farmer', 'wolf', 'sheep', 'cabbage', 'farmer', 'sheep'];
-        var cur = 'root';
-        demoActions.forEach(function (a) { cur = buildDemoNode(cur, a); });
+        var localToReal = { 0: 'root' };
+        var lastGoal = 'root';
+        FULL_DEMO_TREE.forEach(function (entry) {
+            var localId = entry[0], parentLocal = entry[1], action = entry[2];
+            var realId = buildDemoNode(localToReal[parentLocal], action);
+            localToReal[localId] = realId;
+            if (nodes[realId].kind === 'goal') lastGoal = realId;
+        });
+        var cur = lastGoal;
 
         selectedId = cur;
         updateIllustration(nodes[cur].state);
         render();
+        fitZoom();
         statusBanner.className = 'status-banner show ok';
-        statusBanner.textContent = '예시(정답) 트리를 불러왔어요. (교사용)';
+        statusBanner.textContent = '예시(정답) 트리를 불러왔어요. (교사용) — 두 가지 대칭 해답을 모두 포함합니다.';
     }
 
     btnFinish.addEventListener('contextmenu', function (ev) {
@@ -925,6 +963,7 @@
         });
         pop.appendChild(btn);
         document.body.appendChild(pop);
+        clampPopupToBounds(pop);
         setTimeout(function () {
             document.addEventListener('pointerdown', function onAway(ev2) {
                 if (!pop.contains(ev2.target)) pop.remove();
