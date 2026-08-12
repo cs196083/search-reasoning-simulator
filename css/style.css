@@ -115,7 +115,7 @@ body {
 .tab-btn {
     font-family: var(--font-body);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text-muted);
     background: var(--white);
     border: 1px solid var(--blue-light);
@@ -210,8 +210,8 @@ main {
 }
 
 .hero p {
-    font-size: 15px;
-    line-height: 1.8;
+    font-size: 16px;
+    line-height: 1.85;
     color: var(--text-muted);
     margin: 0 0 8px;
 }
@@ -238,7 +238,7 @@ main {
 .section-block h3 {
     font-family: var(--font-title);
     font-weight: 700;
-    font-size: 19px;
+    font-size: 20px;
     color: var(--text);
     margin: 0 0 24px;
 }
@@ -341,14 +341,14 @@ main {
 
 .legend-item .name {
     font-weight: 700;
-    font-size: 13.5px;
+    font-size: 14.5px;
     color: var(--text);
 }
 
 .legend-item .desc {
     margin-top: 4px;
-    font-size: 12.5px;
-    line-height: 1.6;
+    font-size: 13.5px;
+    line-height: 1.65;
     color: var(--text-muted);
 }
 
@@ -380,8 +380,8 @@ main {
 }
 
 .algo-desc {
-    font-size: 14px;
-    line-height: 1.8;
+    font-size: 15px;
+    line-height: 1.85;
     color: var(--text-muted);
     margin: 0 0 22px;
 }
@@ -451,7 +451,7 @@ main {
 .accordion-trigger-title .kr {
     font-family: var(--font-title);
     font-weight: 700;
-    font-size: 16px;
+    font-size: 17px;
     color: var(--text);
 }
 
@@ -512,14 +512,13 @@ main {
     background: var(--white);
     border: 1px solid var(--blue-light);
     border-radius: 12px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
+    padding: 20px 22px;
 }
 
 .rule-block h4 {
     font-family: var(--font-title);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--blue);
     margin: 0 0 10px;
 }
@@ -530,31 +529,13 @@ main {
 }
 
 .rule-block li {
-    font-size: 13.5px;
-    line-height: 1.85;
+    font-size: 15px;
+    line-height: 1.9;
     color: var(--text-muted);
 }
 
 .rule-block li strong {
     color: var(--text);
-}
-
-.rule-example {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 12px;
-}
-
-.rule-example .col-tag {
-    font-family: monospace;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--blue);
-    background: var(--blue-light);
-    padding: 3px 9px;
-    border-radius: 6px;
 }
 
 /* ---------- Footer ---------- */

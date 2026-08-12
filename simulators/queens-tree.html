@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4-Queens 상태공간 트리 만들기</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+    @font-face {
+        font-family: 'KIMM';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KIMM_Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-7Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+
+    :root {
+        --white: #FFFFFF;
+        --blue: #1C60EF;
+        --blue-light: #DBE8FE;
+        --text: #16223f;
+        --text-muted: #55647f;
+        --red: #ef4444;
+        --red-light: #fee2e2;
+        --gold: #d4a017;
+        --gold-light: #fef3c7;
+        --font-title: 'KIMM', 'Malgun Gothic', sans-serif;
+        --font-body: 'A2z', 'Malgun Gothic', sans-serif;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: var(--font-body);
+        color: var(--text);
+        background: var(--white);
+        overflow: hidden;
+        user-select: none;
+    }
+
+    .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* ---------- Top bar ---------- */
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: #fbfcff;
+        flex-shrink: 0;
+    }
+
+    .topbar .title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .topbar h1 {
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 15px;
+        margin: 0;
+        color: var(--text);
+    }
+
+    .legend {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .legend .tag {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+
+    .tag-init { background: #e2e8f0; color: #475569; }
+    .tag-space { background: var(--blue-light); color: var(--blue); }
+    .tag-goal { background: var(--gold-light); color: var(--gold); }
+
+    .controls {
+        display: flex;
+        gap: 8px;
+    }
+
+    button.action {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 12.5px;
+        border-radius: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--blue-light);
+        background: var(--white);
+        color: var(--blue);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    button.action:hover { background: var(--blue-light); }
+
+    button.action.primary {
+        background: var(--blue);
+        color: var(--white);
+        border-color: var(--blue);
+    }
+
+    button.action.primary:hover { background: #164fce; }
+
+    /* ---------- Status banner ---------- */
+
+    .status-banner {
+        display: none;
+        padding: 9px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .status-banner.show { display: block; }
+    .status-banner.ok { background: var(--gold-light); color: #92700c; }
+    .status-banner.empty { background: #f1f5f9; color: var(--text-muted); }
+
+    /* ---------- Canvas ---------- */
+
+    .canvas-outer {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+        background:
+            radial-gradient(circle at 1px 1px, rgba(28,96,239,0.10) 1px, transparent 0) 0 0 / 22px 22px,
+            var(--white);
+    }
+
+    .canvas-inner {
+        position: relative;
+    }
+
+    .canvas-inner svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+
+    .node {
+        position: absolute;
+        width: 104px;
+        height: 104px;
+        border-radius: 10px;
+        border: 2px solid var(--blue-light);
+        background: var(--white);
+        box-shadow: 0 4px 10px rgba(28, 96, 239, 0.10);
+        transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .node.invalid {
+        border-color: var(--red);
+        background: var(--red-light);
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+    }
+
+    .node.goal {
+        border-color: var(--gold);
+        box-shadow: 0 0 0 4px var(--gold-light), 0 6px 18px rgba(212, 160, 23, 0.35);
+    }
+
+    .node-badge {
+        position: absolute;
+        top: -10px;
+        left: 8px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+        z-index: 3;
+    }
+
+    .node-badge.dup {
+        left: auto;
+        right: 8px;
+        background: #f1f5f9;
+        color: var(--text-muted);
+    }
+
+    .board-grid {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 88px;
+        height: 88px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(4, 1fr);
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid var(--blue-light);
+    }
+
+    .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        color: var(--blue);
+        background: var(--white);
+    }
+
+    .cell.alt { background: #f0f5ff; }
+
+    .cell.own-row {
+        cursor: pointer;
+    }
+
+    .cell.own-row:hover {
+        background: var(--blue-light);
+    }
+
+    .node.invalid .cell.own-row:hover { background: #fecaca; }
+
+    .drag-handle {
+        position: absolute;
+        bottom: -9px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--blue);
+        border: 2px solid var(--white);
+        cursor: grab;
+        z-index: 4;
+        box-shadow: 0 2px 6px rgba(28,96,239,0.4);
+    }
+
+    .drag-handle:active { cursor: grabbing; }
+
+    .confirm-pop {
+        position: absolute;
+        z-index: 10;
+        background: var(--text);
+        color: var(--white);
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+    }
+
+    .confirm-pop button {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 11.5px;
+        border: 0;
+        border-radius: 6px;
+        padding: 4px 9px;
+        cursor: pointer;
+    }
+
+    .confirm-pop .yes { background: var(--red); color: var(--white); }
+    .confirm-pop .no { background: rgba(255,255,255,0.15); color: var(--white); }
+
+    .shake { animation: nodeShake 0.3s ease; }
+    @keyframes nodeShake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-3px); }
+        75% { transform: translateX(3px); }
+    }
+
+    .hint {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 11.5px;
+        color: var(--text-muted);
+        background: rgba(255,255,255,0.9);
+        border: 1px solid var(--blue-light);
+        padding: 4px 12px;
+        border-radius: 999px;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="topbar">
+        <div class="title">
+            <h1>4-Queens 상태공간 트리 만들기</h1>
+            <div class="legend">
+                <span class="tag tag-init">● 초기 상태</span>
+                <span class="tag tag-space">● 상태공간 (트리 전체)</span>
+                <span class="tag tag-goal">● 목표 상태</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="action" id="btn-reset">초기화</button>
+            <button class="action primary" id="btn-complete">완료</button>
+        </div>
+    </div>
+
+    <div class="status-banner" id="status-banner"></div>
+
+    <div class="canvas-outer" id="canvas-outer">
+        <div class="canvas-inner" id="canvas-inner">
+            <svg id="svg-layer"></svg>
+        </div>
+        <div class="hint">보드 아래 파란 점을 드래그해 자식 보드를 만들고, 그 행의 칸을 클릭해 퀸을 놓아 보세요 (우클릭: 보드 삭제)</div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var BOARD = 104;
+    var LEVEL_H = 170;
+    var SLOT_W = 134;
+    var PALETTE = ['#1C60EF', '#0EA5A4', '#7C3AED', '#DB2777'];
+
+    var nodes = {};
+    var seq = 0;
+
+    function makeRoot() {
+        nodes = {};
+        seq = 0;
+        nodes.root = { id: 'root', parentId: null, depth: 0, col: null, children: [], color: null, invalid: false, x: 0, y: 0 };
+    }
+    makeRoot();
+
+    var canvasOuter = document.getElementById('canvas-outer');
+    var canvasInner = document.getElementById('canvas-inner');
+    var svg = document.getElementById('svg-layer');
+    var statusBanner = document.getElementById('status-banner');
+
+    function ownRow(node) { return node.depth - 1; }
+
+    function ancestorChain(node) {
+        var chain = [];
+        var cur = node;
+        while (cur && cur.parentId !== null) {
+            chain.unshift(cur);
+            cur = nodes[cur.parentId];
+        }
+        return chain;
+    }
+
+    function queensByRow(node) {
+        var arr = [null, null, null, null];
+        ancestorChain(node).forEach(function (n) {
+            if (n.col !== null) arr[ownRow(n)] = n.col;
+        });
+        return arr;
+    }
+
+    function checkConflict(node) {
+        if (node.col === null) { node.invalid = false; return; }
+        var chain = ancestorChain(node).filter(function (n) { return n.id !== node.id; });
+        var conflict = chain.some(function (a) {
+            if (a.col === null) return false;
+            if (a.col === node.col) return true;
+            if (Math.abs(a.depth - node.depth) === Math.abs(a.col - node.col)) return true;
+            return false;
+        });
+        node.invalid = conflict;
+    }
+
+    // ---------- Layout ----------
+
+    function layout() {
+        var slotCounter = { n: 0 };
+        function assign(node) {
+            if (node.children.length === 0) {
+                node.x = slotCounter.n * SLOT_W;
+                slotCounter.n++;
+            } else {
+                node.children.forEach(function (id) { assign(nodes[id]); });
+                var xs = node.children.map(function (id) { return nodes[id].x; });
+                node.x = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+            }
+            node.y = node.depth * LEVEL_H;
+        }
+        assign(nodes.root);
+
+        var outerW = canvasOuter.clientWidth;
+        var treeW = Math.max(slotCounter.n * SLOT_W, SLOT_W);
+        var innerW = Math.max(outerW, treeW + 160);
+        var offset = innerW / 2 - (nodes.root.x + BOARD / 2);
+        Object.keys(nodes).forEach(function (id) { nodes[id].x += offset; });
+
+        canvasInner.style.width = innerW + 'px';
+        canvasInner.style.height = (5 * LEVEL_H + 60) + 'px';
+        svg.setAttribute('width', innerW);
+        svg.setAttribute('height', 5 * LEVEL_H + 60);
+    }
+
+    // ---------- Render ----------
+
+    function render() {
+        layout();
+        canvasInner.querySelectorAll('.node').forEach(function (el) { el.remove(); });
+        svg.innerHTML = '';
+
+        Object.keys(nodes).forEach(function (id) {
+            var node = nodes[id];
+            if (node.parentId !== null) {
+                var parent = nodes[node.parentId];
+                var x1 = parent.x + BOARD / 2, y1 = parent.y + BOARD + 20;
+                var x2 = node.x + BOARD / 2, y2 = node.y + 20;
+                var midY = (y1 + y2) / 2;
+                var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
+                path.setAttribute('stroke', node.color || '#1C60EF');
+                path.setAttribute('stroke-width', '2.5');
+                path.setAttribute('fill', 'none');
+                svg.appendChild(path);
+            }
+            renderNode(node);
+        });
+    }
+
+    function renderNode(node) {
+        var el = document.createElement('div');
+        el.className = 'node' + (node.invalid ? ' invalid' : '') + (node.goal ? ' goal' : '');
+        el.style.left = node.x + 'px';
+        el.style.top = (node.y + 20) + 'px';
+        el.dataset.id = node.id;
+
+        if (node.id === 'root') {
+            var b = document.createElement('div');
+            b.className = 'node-badge tag-init';
+            b.style.background = '#e2e8f0';
+            b.style.color = '#475569';
+            b.textContent = '초기 상태';
+            el.appendChild(b);
+        }
+        if (node.goal) {
+            var gb = document.createElement('div');
+            gb.className = 'node-badge tag-goal';
+            gb.style.background = '#fef3c7';
+            gb.style.color = '#92700c';
+            gb.textContent = '목표 상태';
+            el.appendChild(gb);
+            if (node.dup) {
+                var db = document.createElement('div');
+                db.className = 'node-badge dup';
+                db.textContent = '중복';
+                el.appendChild(db);
+            }
+        }
+
+        var grid = document.createElement('div');
+        grid.className = 'board-grid';
+        var rows = queensByRow(node);
+        for (var r = 0; r < 4; r++) {
+            for (var c = 0; c < 4; c++) {
+                var cell = document.createElement('div');
+                cell.className = 'cell' + ((r + c) % 2 === 1 ? ' alt' : '');
+                if (rows[r] === c) cell.textContent = '♛';
+                if (node.id !== 'root' && r === ownRow(node)) {
+                    cell.classList.add('own-row');
+                    (function (node, c) {
+                        cell.addEventListener('click', function () { toggleQueen(node.id, c); });
+                    })(node, c);
+                }
+                grid.appendChild(cell);
+            }
+        }
+        el.appendChild(grid);
+
+        if (node.id !== 'root') {
+            el.addEventListener('contextmenu', function (ev) {
+                ev.preventDefault();
+                askDelete(node.id, ev.clientX, ev.clientY);
+            });
+        }
+
+        var canBranch = node.id === 'root' ? true : (node.col !== null && !node.invalid);
+        if (canBranch && node.depth < 4) {
+            var handle = document.createElement('div');
+            handle.className = 'drag-handle';
+            handle.addEventListener('pointerdown', function (ev) { startDrag(node.id, ev); });
+            el.appendChild(handle);
+        }
+
+        canvasInner.appendChild(el);
+    }
+
+    // ---------- Interactions ----------
+
+    function toggleQueen(nodeId, col) {
+        var node = nodes[nodeId];
+        if (node.children.length > 0) {
+            flashShake(nodeId);
+            return;
+        }
+        if (node.col === col) {
+            node.col = null;
+            node.invalid = false;
+        } else {
+            node.col = col;
+            checkConflict(node);
+        }
+        clearGoals();
+        render();
+    }
+
+    function flashShake(nodeId) {
+        var el = canvasInner.querySelector('.node[data-id="' + nodeId + '"]');
+        if (!el) return;
+        el.classList.remove('shake');
+        void el.offsetWidth;
+        el.classList.add('shake');
+    }
+
+    function addChild(parentId, dropClientX) {
+        var parent = nodes[parentId];
+        var rect = canvasInner.getBoundingClientRect();
+        var dropX = dropClientX - rect.left;
+
+        var id = 'n' + (++seq);
+        var color = parent.id === 'root' ? PALETTE[parent.children.length % PALETTE.length] : parent.color;
+        var node = { id: id, parentId: parent.id, depth: parent.depth + 1, col: null, children: [], color: color, invalid: false, x: 0, y: 0 };
+        nodes[id] = node;
+
+        var idx = parent.children.filter(function (cid) { return nodes[cid].x < dropX; }).length;
+        parent.children.splice(idx, 0, id);
+
+        clearGoals();
+        render();
+    }
+
+    function deleteNode(nodeId) {
+        var node = nodes[nodeId];
+        if (!node || node.id === 'root') return;
+        node.children.slice().forEach(deleteNode);
+        var parent = nodes[node.parentId];
+        parent.children = parent.children.filter(function (id) { return id !== nodeId; });
+        delete nodes[nodeId];
+    }
+
+    function askDelete(nodeId, clientX, clientY) {
+        document.querySelectorAll('.confirm-pop').forEach(function (p) { p.remove(); });
+        var rect = canvasInner.getBoundingClientRect();
+        var pop = document.createElement('div');
+        pop.className = 'confirm-pop';
+        pop.style.left = (clientX - rect.left) + 'px';
+        pop.style.top = (clientY - rect.top) + 'px';
+        pop.innerHTML = '<span>이 보드를 삭제할까요?</span>';
+        var yes = document.createElement('button');
+        yes.className = 'yes';
+        yes.textContent = '삭제';
+        yes.addEventListener('click', function () {
+            deleteNode(nodeId);
+            pop.remove();
+            clearGoals();
+            render();
+        });
+        var no = document.createElement('button');
+        no.className = 'no';
+        no.textContent = '취소';
+        no.addEventListener('click', function () { pop.remove(); });
+        pop.appendChild(yes);
+        pop.appendChild(no);
+        canvasInner.appendChild(pop);
+
+        setTimeout(function () {
+            document.addEventListener('pointerdown', function onAway(ev) {
+                if (!pop.contains(ev.target)) { pop.remove(); }
+                document.removeEventListener('pointerdown', onAway);
+            });
+        }, 0);
+    }
+
+    // ---------- Drag to create child ----------
+
+    var dragState = null;
+    var ghostPath = null;
+
+    function startDrag(parentId, ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        dragState = { parentId: parentId };
+        ghostPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        ghostPath.setAttribute('stroke', '#94a3b8');
+        ghostPath.setAttribute('stroke-width', '2.5');
+        ghostPath.setAttribute('stroke-dasharray', '5,5');
+        ghostPath.setAttribute('fill', 'none');
+        svg.appendChild(ghostPath);
+        window.addEventListener('pointermove', onDragMove);
+        window.addEventListener('pointerup', onDragEnd);
+    }
+
+    function onDragMove(ev) {
+        if (!dragState) return;
+        var parent = nodes[dragState.parentId];
+        var rect = canvasInner.getBoundingClientRect();
+        var x1 = parent.x + BOARD / 2, y1 = parent.y + BOARD + 20;
+        var x2 = ev.clientX - rect.left, y2 = ev.clientY - rect.top;
+        var midY = (y1 + y2) / 2;
+        ghostPath.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
+    }
+
+    function onDragEnd(ev) {
+        window.removeEventListener('pointermove', onDragMove);
+        window.removeEventListener('pointerup', onDragEnd);
+        if (ghostPath) { ghostPath.remove(); ghostPath = null; }
+        if (!dragState) return;
+        var parentId = dragState.parentId;
+        dragState = null;
+
+        var rect = canvasOuter.getBoundingClientRect();
+        var within = ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
+        if (within) addChild(parentId, ev.clientX);
+    }
+
+    // ---------- Complete / validation ----------
+
+    function clearGoals() {
+        Object.keys(nodes).forEach(function (id) { nodes[id].goal = false; nodes[id].dup = false; });
+        statusBanner.className = 'status-banner';
+        statusBanner.textContent = '';
+    }
+
+    document.getElementById('btn-complete').addEventListener('click', function () {
+        clearGoals();
+        var leaves = Object.keys(nodes).map(function (id) { return nodes[id]; })
+            .filter(function (n) { return n.depth === 4 && n.col !== null && !n.invalid; });
+
+        var groups = {};
+        leaves.forEach(function (n) {
+            var chain = ancestorChain(n);
+            var sig = chain.map(function (a) { return a.col; }).join('-');
+            (groups[sig] = groups[sig] || []).push(n);
+        });
+
+        var sigs = Object.keys(groups);
+        if (sigs.length === 0) {
+            statusBanner.className = 'status-banner show empty';
+            statusBanner.textContent = '아직 유효한 목표 상태(깊이 4, 규칙 위반 없음)를 완성하지 못했어요. 트리를 계속 확장해 보세요.';
+            render();
+            return;
+        }
+
+        var dupCount = 0;
+        sigs.forEach(function (sig, i) {
+            groups[sig].forEach(function (n, j) {
+                n.goal = true;
+                if (j > 0) { n.dup = true; dupCount++; }
+            });
+        });
+
+        render();
+
+        sigs.forEach(function (sig) {
+            var first = groups[sig][0];
+            fireConfetti(first);
+        });
+
+        var msg = '고유한 목표 상태 ' + sigs.length + '개를 찾았어요! 🎉';
+        if (dupCount > 0) msg += ' (같은 배치를 다시 만든 중복 ' + dupCount + '개는 "중복" 표시했어요)';
+        statusBanner.className = 'status-banner show ok';
+        statusBanner.textContent = msg;
+    });
+
+    function fireConfetti(node) {
+        var el = canvasInner.querySelector('.node[data-id="' + node.id + '"]');
+        if (!el || typeof confetti !== 'function') return;
+        var rect = el.getBoundingClientRect();
+        confetti({
+            particleCount: 60,
+            spread: 55,
+            origin: {
+                x: (rect.left + rect.width / 2) / window.innerWidth,
+                y: (rect.top + rect.height / 2) / window.innerHeight
+            }
+        });
+    }
+
+    document.getElementById('btn-reset').addEventListener('click', function () {
+        makeRoot();
+        clearGoals();
+        render();
+    });
+
+    window.addEventListener('resize', render);
+
+    // 이 페이지는 접힌 아코디언 / 숨겨진 탭 안에 iframe으로 들어있어
+    // 처음 로드될 때 폭이 0일 수 있다. 실제로 화면에 보이는 순간(탭 전환,
+    // 아코디언 펼침, 창 크기 변경 등) 폭이 바뀌면 다시 레이아웃을 계산한다.
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () { render(); }).observe(canvasOuter);
+    }
+
+    render();
+})();
+</script>
+</body>
+</html>

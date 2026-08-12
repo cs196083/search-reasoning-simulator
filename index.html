@@ -100,39 +100,17 @@
                     <div class="accordion-body">
 
                         <div class="rule-block">
-                            <h4>문제</h4>
+                            <h4>문제 &amp; 규칙</h4>
                             <ul>
-                                <li>4×4 체스판에 <strong>퀸(Queen) 4개</strong>를 서로 공격하지 못하도록 배치한다.</li>
-                                <li>퀸은 <strong>가로 · 세로 · 대각선</strong> 모든 방향으로 몇 칸이든 이동(공격)할 수 있다.</li>
-                                <li>초기 상태는 빈 4×4 보드이고, 목표 상태는 4개의 퀸이 서로 공격하지 않는 배치이다.</li>
+                                <li>4×4 체스판에 <strong>퀸(Queen) 4개</strong>를 서로 공격하지 못하도록 배치하는 문제입니다.</li>
+                                <li>퀸은 <strong>가로 · 세로 · 대각선</strong> 방향으로 몇 칸이든 이동(공격)할 수 있습니다.</li>
+                                <li>따라서 두 퀸이 <strong>같은 행, 같은 열, 같은 대각선</strong> 위에 있으면 안 됩니다.</li>
+                                <li>빈 보드가 <strong>초기 상태</strong>이고, 이 조건을 모두 만족하며 퀸 4개를 다 놓은 상태가 <strong>목표 상태</strong>입니다.</li>
                             </ul>
                         </div>
 
-                        <div class="rule-block">
-                            <h4>규칙 (공격 조건 — 아래 중 하나라도 해당하면 배치 불가)</h4>
-                            <ul>
-                                <li><strong>같은 행(row)</strong>에 퀸이 2개 이상 있으면 안 된다.</li>
-                                <li><strong>같은 열(column)</strong>에 퀸이 2개 이상 있으면 안 된다.</li>
-                                <li><strong>같은 대각선</strong>(↗↙ 방향, ↖↘ 방향 모두)에 퀸이 2개 이상 있으면 안 된다.</li>
-                            </ul>
-                        </div>
-
-                        <div class="rule-block">
-                            <h4>탐색 트리로 표현하는 방법</h4>
-                            <ul>
-                                <li>한 행에는 퀸을 <strong>정확히 1개만</strong> 놓는다고 약속하면, 트리의 <strong>레벨(깊이)</strong>이 곧 <strong>행 번호(1행 → 4행)</strong>가 된다.</li>
-                                <li><strong>루트 노드</strong> = 아직 아무 퀸도 놓지 않은 빈 보드(초기 상태).</li>
-                                <li><strong>1레벨(1행)</strong>: 퀸을 놓을 수 있는 열이 4곳이므로 자식 노드가 최대 4개 생긴다.</li>
-                                <li><strong>2레벨(2행)</strong> 이후: 각 자식 노드에서 다시 4개 열 후보를 시도하되, 이미 놓인 퀸과 같은 열이거나 같은 대각선이면 그 가지는 <strong>바로 막힌다 (가지치기 / dead-end)</strong>.</li>
-                                <li>이 과정을 4레벨(4행)까지 반복해서, 4개의 퀸이 모두 서로 공격하지 않게 놓인 리프 노드가 나오면 그것이 <strong>목표 상태(해)</strong>이다.</li>
-                            </ul>
-                            <div class="rule-example">
-                                <span>예시 해(목표 상태) 한 가지 — 행 순서대로 열 번호:</span>
-                                <span class="col-tag">1행→2열</span>
-                                <span class="col-tag">2행→4열</span>
-                                <span class="col-tag">3행→1열</span>
-                                <span class="col-tag">4행→3열</span>
-                            </div>
+                        <div class="sim-frame-wrap" style="margin-top:16px;">
+                            <iframe src="simulators/queens-tree.html" title="4-Queens 상태공간 트리 만들기" style="height:760px; min-height:0;"></iframe>
                         </div>
 
                     </div>
