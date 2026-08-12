@@ -312,7 +312,12 @@
         while (cur && cur.parentId !== null) { chain.unshift(cur); cur = nodes[cur.parentId]; }
         return chain;
     }
-    function ancestorStates(node) { return ancestorChain(node).map(function (n) { return n.state; }); }
+    function ancestorStates(node) {
+        // ancestorChain never includes the root itself (root.parentId is null),
+        // but the initial state is a real state a later action could legitimately repeat,
+        // so it must always be included in the "have we been here before" check.
+        return [nodes.root.state].concat(ancestorChain(node).map(function (n) { return n.state; }));
+    }
 
     function classify(parentState, ancestorSts, action) {
         var applicable, newState;
@@ -334,9 +339,9 @@
         var unsafeSC = newState.s === newState.c && newState.s !== farmerSide;
 
         var kind, label;
-        if (repeat) { kind = 'noop'; label = '금지상태 (변화없음)'; }
-        else if (unsafeWS) { kind = 'wolf-sheep'; label = '금지상태 (양 & 늑대)'; }
-        else if (unsafeSC) { kind = 'sheep-cabbage'; label = '금지상태 (양 & 양배추)'; }
+        if (repeat) { kind = 'noop'; label = ACTION_LABEL[action] + ' → 금지상태 (변화없음)'; }
+        else if (unsafeWS) { kind = 'wolf-sheep'; label = ACTION_LABEL[action] + ' → 금지상태 (양 & 늑대)'; }
+        else if (unsafeSC) { kind = 'sheep-cabbage'; label = ACTION_LABEL[action] + ' → 금지상태 (양 & 양배추)'; }
         else if (isGoalState(newState)) { kind = 'goal'; label = ACTION_LABEL[action] + ' → 목표 상태!'; }
         else { kind = 'ok'; label = ACTION_LABEL[action]; }
 
