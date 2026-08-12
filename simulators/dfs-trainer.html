@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DFS 탐색 순서 클릭 연습</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+    @font-face {
+        font-family: 'KIMM';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KIMM_Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-7Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    :root {
+        --white: #FFFFFF;
+        --blue: #1C60EF;
+        --blue-light: #DBE8FE;
+        --text: #16223f;
+        --text-muted: #55647f;
+        --red: #ef4444;
+        --red-light: #fee2e2;
+        --gold: #d4a017;
+        --gold-light: #fef3c7;
+        --font-title: 'KIMM', 'Malgun Gothic', sans-serif;
+        --font-body: 'A2z', 'Malgun Gothic', sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: var(--font-body);
+        color: var(--text);
+        background: var(--white);
+        overflow: hidden;
+        user-select: none;
+    }
+    .app { display: flex; flex-direction: column; height: 100%; }
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: #fbfcff;
+        flex-shrink: 0;
+    }
+    .topbar h1 {
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 15px;
+        margin: 0;
+        color: var(--text);
+    }
+    .topbar .sub {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.action {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 12.5px;
+        border-radius: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--blue-light);
+        background: var(--white);
+        color: var(--blue);
+        cursor: pointer;
+    }
+    button.action:hover { background: var(--blue-light); }
+    button.action.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
+    button.action.primary:hover { background: #164fce; }
+
+    .status-banner {
+        display: none;
+        padding: 9px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .status-banner.show { display: block; }
+    .status-banner.ok { background: var(--gold-light); color: #92700c; }
+    .status-banner.bad { background: var(--red-light); color: #b91c1c; }
+
+    .canvas-outer {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+        background:
+            radial-gradient(circle at 1px 1px, rgba(28,96,239,0.10) 1px, transparent 0) 0 0 / 22px 22px,
+            var(--white);
+    }
+    .canvas-inner { position: relative; }
+    .canvas-inner svg { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+    .tnode {
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 2.5px solid var(--blue-light);
+        background: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 17px;
+        color: var(--blue);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: 0 3px 8px rgba(28,96,239,0.10);
+    }
+    .tnode:hover { border-color: var(--blue); }
+    .tnode.goal-marker { border-style: dashed; border-color: var(--gold); }
+    .tnode.visited { background: var(--blue); color: var(--white); border-color: var(--blue); }
+    .tnode.visited.goal-marker { background: var(--gold); border-color: var(--gold); color: #fff; }
+    .tnode.wrong { animation: shakeN 0.35s ease; border-color: var(--red); }
+    .tnode .order-badge {
+        position: absolute;
+        top: -9px;
+        right: -6px;
+        background: var(--text);
+        color: var(--white);
+        font-size: 9.5px;
+        font-weight: 700;
+        border-radius: 999px;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    @keyframes shakeN {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+    }
+
+    .footer {
+        flex-shrink: 0;
+        border-top: 1px solid var(--blue-light);
+        background: #fbfcff;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .footer .seq-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        flex-shrink: 0;
+    }
+    .seq-track {
+        flex: 1;
+        min-width: 160px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--blue);
+    }
+    .seq-track .chip {
+        background: var(--blue-light);
+        border-radius: 8px;
+        padding: 3px 9px;
+    }
+    .seq-track .arrow { color: #a9b3c7; font-weight: 400; }
+    .seq-track .placeholder { color: #a9b3c7; font-weight: 400; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="topbar">
+        <div>
+            <h1 id="title-text">DFS 탐색 순서 클릭 연습</h1>
+            <div class="sub">노드를 깊이 우선 탐색 순서대로 클릭해서 목표 상태까지 도달해 보세요.</div>
+        </div>
+        <div class="controls">
+            <button class="action" id="btn-retry">다시 하기</button>
+            <button class="action primary" id="btn-new">연습 문제 불러오기</button>
+        </div>
+    </div>
+
+    <div class="status-banner" id="status-banner"></div>
+
+    <div class="canvas-outer" id="canvas-outer">
+        <div class="canvas-inner" id="canvas-inner">
+            <svg id="svg-layer"></svg>
+        </div>
+    </div>
+
+    <div class="footer">
+        <span class="seq-label">클릭한 순서</span>
+        <div class="seq-track" id="seq-track"><span class="placeholder">노드를 클릭하면 여기에 표시돼요</span></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    // ---------- Tree data ----------
+    // 각 트리는 { root, goalPool(목표로 삼을 수 있는 노드들), edges: {부모: [자식들(왼쪽 우선순서)]} }
+    var DEFAULT_TREE = {
+        name: '기본 예제',
+        root: 'A',
+        fixedGoal: 'K',
+        edges: {
+            A: ['B', 'C', 'D'],
+            B: ['E'],
+            C: ['F'],
+            D: ['G', 'H'],
+            E: ['I', 'J'],
+            F: [], G: [], H: ['K'], I: [], J: [], K: []
+        }
+    };
+
+    var PRACTICE_TREES = [
+        {
+            name: '연습 1',
+            root: 'A',
+            edges: {
+                A: ['B', 'C'],
+                B: ['D', 'E'],
+                C: ['F'],
+                D: ['G'],
+                E: [],
+                F: ['H', 'I'],
+                G: [], H: [], I: []
+            }
+        },
+        {
+            name: '연습 2',
+            root: 'A',
+            edges: {
+                A: ['B', 'C', 'D'],
+                B: ['E'],
+                C: ['F', 'G'],
+                D: [],
+                E: ['H'],
+                F: [],
+                G: ['I', 'J'],
+                H: [], I: [], J: []
+            }
+        },
+        {
+            name: '연습 3',
+            root: 'A',
+            edges: {
+                A: ['B', 'C'],
+                B: ['D'],
+                C: ['E', 'F'],
+                D: ['G'],
+                E: [],
+                F: ['H'],
+                G: [], H: []
+            }
+        },
+        {
+            name: '연습 4',
+            root: 'A',
+            edges: {
+                A: ['B', 'C', 'D', 'E'],
+                B: ['F'],
+                C: [],
+                D: ['G', 'H'],
+                E: ['I'],
+                F: [], G: [],
+                H: ['J'],
+                I: [],
+                J: ['K'],
+                K: []
+            }
+        }
+    ];
+
+    var BOARD = 48;
+    var LEVEL_H = 92;
+    var SLOT_W = 78;
+
+    var canvasOuter = document.getElementById('canvas-outer');
+    var canvasInner = document.getElementById('canvas-inner');
+    var svg = document.getElementById('svg-layer');
+    var statusBanner = document.getElementById('status-banner');
+    var seqTrack = document.getElementById('seq-track');
+    var titleText = document.getElementById('title-text');
+
+    var current = null;   // {root, edges, goal}
+    var positions = {};   // id -> {x,y}
+    var visitedOrder = [];
+    var graded = false;
+
+    function allNodeIds(edges) { return Object.keys(edges); }
+
+    function computeDfsPathTo(edges, root, goal) {
+        var path = [];
+        var found = false;
+        function visit(id) {
+            if (found) return;
+            path.push(id);
+            if (id === goal) { found = true; return; }
+            (edges[id] || []).forEach(function (c) { if (!found) visit(c); });
+        }
+        visit(root);
+        return path;
+    }
+
+    function layout(edges, root) {
+        positions = {};
+        var slot = { n: 0 };
+        function assign(id) {
+            var children = edges[id] || [];
+            if (children.length === 0) {
+                positions[id] = { x: slot.n * SLOT_W, y: 0 };
+                slot.n++;
+            } else {
+                children.forEach(assign);
+                var xs = children.map(function (c) { return positions[c].x; });
+                positions[id] = { x: (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, y: 0 };
+            }
+        }
+        assign(root);
+
+        // depth (y) via BFS from root
+        var depth = {};
+        depth[root] = 0;
+        var queue = [root];
+        while (queue.length) {
+            var id = queue.shift();
+            (edges[id] || []).forEach(function (c) {
+                depth[c] = depth[id] + 1;
+                queue.push(c);
+            });
+        }
+        Object.keys(positions).forEach(function (id) { positions[id].y = depth[id] * LEVEL_H; });
+
+        var outerW = canvasOuter.clientWidth;
+        var treeW = Math.max(slot.n * SLOT_W, SLOT_W);
+        var innerW = Math.max(outerW, treeW + 120);
+        var maxDepth = Math.max.apply(null, Object.values(depth));
+        var innerH = (maxDepth + 1) * LEVEL_H + 60;
+        var offset = innerW / 2 - (positions[root].x + BOARD / 2);
+        Object.keys(positions).forEach(function (id) { positions[id].x += offset; });
+
+        canvasInner.style.width = innerW + 'px';
+        canvasInner.style.height = innerH + 'px';
+        svg.setAttribute('width', innerW);
+        svg.setAttribute('height', innerH);
+    }
+
+    function render() {
+        layout(current.edges, current.root);
+        canvasInner.querySelectorAll('.tnode').forEach(function (el) { el.remove(); });
+        svg.innerHTML = '';
+
+        Object.keys(current.edges).forEach(function (id) {
+            (current.edges[id] || []).forEach(function (c) {
+                var p1 = positions[id], p2 = positions[c];
+                var x1 = p1.x + BOARD / 2, y1 = p1.y + BOARD + 20;
+                var x2 = p2.x + BOARD / 2, y2 = p2.y + 20;
+                var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke', '#c7d6f9');
+                line.setAttribute('stroke-width', '2.5');
+                svg.appendChild(line);
+            });
+        });
+
+        Object.keys(positions).forEach(function (id) {
+            var el = document.createElement('div');
+            var visitedIdx = visitedOrder.indexOf(id);
+            el.className = 'tnode' + (id === current.goal ? ' goal-marker' : '') + (visitedIdx >= 0 ? ' visited' : '');
+            el.style.left = positions[id].x + 'px';
+            el.style.top = (positions[id].y + 20) + 'px';
+            el.textContent = id;
+            el.dataset.id = id;
+            if (visitedIdx >= 0) {
+                var badge = document.createElement('div');
+                badge.className = 'order-badge';
+                badge.textContent = visitedIdx + 1;
+                el.appendChild(badge);
+            }
+            el.addEventListener('click', function () { onClickNode(id, el); });
+            canvasInner.appendChild(el);
+        });
+    }
+
+    function renderSeq() {
+        if (visitedOrder.length === 0) {
+            seqTrack.innerHTML = '<span class="placeholder">노드를 클릭하면 여기에 표시돼요</span>';
+            return;
+        }
+        seqTrack.innerHTML = visitedOrder.map(function (id, i) {
+            return (i > 0 ? '<span class="arrow">→</span>' : '') + '<span class="chip">' + id + '</span>';
+        }).join('');
+    }
+
+    function flashWrong(el) {
+        el.classList.remove('wrong');
+        void el.offsetWidth;
+        el.classList.add('wrong');
+    }
+
+    function onClickNode(id, el) {
+        if (graded) return;
+        if (visitedOrder.indexOf(id) >= 0) return;
+        visitedOrder.push(id);
+        renderSeq();
+        render();
+        if (id === current.goal) {
+            grade();
+        }
+    }
+
+    function grade() {
+        graded = true;
+        var correct = computeDfsPathTo(current.edges, current.root, current.goal);
+        var isRight = correct.length === visitedOrder.length && correct.every(function (id, i) { return id === visitedOrder[i]; });
+        if (isRight) {
+            statusBanner.className = 'status-banner show ok';
+            statusBanner.textContent = '정답입니다! 깊이 우선 탐색 순서를 정확히 클릭했어요 🎉';
+            fireConfetti();
+        } else {
+            statusBanner.className = 'status-banner show bad';
+            statusBanner.textContent = '아쉬워요. 정답 순서: ' + correct.join(' → ') + ' — "다시 하기"를 눌러 재도전해 보세요.';
+        }
+    }
+
+    function fireConfetti() {
+        if (typeof confetti !== 'function') return;
+        confetti({ particleCount: 90, spread: 70, origin: { x: 0.5, y: 0.4 } });
+    }
+
+    function loadTree(tree, goal) {
+        current = { name: tree.name, root: tree.root, edges: tree.edges, goal: goal };
+        visitedOrder = [];
+        graded = false;
+        statusBanner.className = 'status-banner';
+        statusBanner.textContent = '';
+        titleText.textContent = tree.name ? ('DFS 탐색 순서 클릭 연습 — ' + tree.name) : 'DFS 탐색 순서 클릭 연습';
+        renderSeq();
+        render();
+    }
+
+    function loadDefault() {
+        loadTree(DEFAULT_TREE, DEFAULT_TREE.fixedGoal);
+    }
+
+    function loadRandomPractice() {
+        var tree = PRACTICE_TREES[Math.floor(Math.random() * PRACTICE_TREES.length)];
+        var candidates = allNodeIds(tree.edges).filter(function (id) { return id !== tree.root; });
+        var goal = candidates[Math.floor(Math.random() * candidates.length)];
+        loadTree(tree, goal);
+    }
+
+    document.getElementById('btn-retry').addEventListener('click', function () {
+        loadTree({ name: current.name, root: current.root, edges: current.edges }, current.goal);
+    });
+    document.getElementById('btn-new').addEventListener('click', loadRandomPractice);
+
+    window.addEventListener('resize', render);
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () { render(); }).observe(canvasOuter);
+    }
+
+    loadDefault();
+})();
+</script>
+</body>
+</html>

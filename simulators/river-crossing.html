@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>강 건너기 상태공간 트리 만들기</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+    @font-face {
+        font-family: 'KIMM';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KIMM_Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-7Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    :root {
+        --white: #FFFFFF;
+        --blue: #1C60EF;
+        --blue-light: #DBE8FE;
+        --text: #16223f;
+        --text-muted: #55647f;
+        --red: #ef4444;
+        --red-light: #fee2e2;
+        --gold: #d4a017;
+        --gold-light: #fef3c7;
+        --font-title: 'KIMM', 'Malgun Gothic', sans-serif;
+        --font-body: 'A2z', 'Malgun Gothic', sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: var(--font-body);
+        color: var(--text);
+        background: var(--white);
+        overflow: hidden;
+        user-select: none;
+    }
+    .app { display: flex; flex-direction: column; height: 100%; }
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: #fbfcff;
+        flex-shrink: 0;
+    }
+    .topbar h1 { font-family: var(--font-title); font-weight: 700; font-size: 15px; margin: 0; color: var(--text); }
+    .topbar .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+    .legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .legend .tag { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+    .tag-init { background: #e2e8f0; color: #475569; }
+    .tag-forbid { background: var(--red-light); color: #b91c1c; }
+    .tag-goal { background: var(--gold-light); color: #92700c; }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.action {
+        font-family: var(--font-body); font-weight: 700; font-size: 12.5px;
+        border-radius: 8px; padding: 8px 14px; border: 1px solid var(--blue-light);
+        background: var(--white); color: var(--blue); cursor: pointer;
+    }
+    button.action:hover { background: var(--blue-light); }
+    button.action.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
+    button.action.primary:hover { background: #164fce; }
+    button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .status-banner {
+        display: none; padding: 9px 18px; font-size: 13px; font-weight: 700; text-align: center; flex-shrink: 0;
+    }
+    .status-banner.show { display: block; }
+    .status-banner.ok { background: var(--gold-light); color: #92700c; }
+    .status-banner.bad { background: var(--red-light); color: #b91c1c; }
+    .status-banner.info { background: var(--blue-light); color: #1e4bb8; }
+
+    .main-area { flex: 1; display: flex; min-height: 0; }
+
+    /* ---------- Left: tree canvas ---------- */
+    .tree-panel { flex: 1.35; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--blue-light); }
+    .canvas-outer {
+        flex: 1; overflow: auto; position: relative;
+        background: radial-gradient(circle at 1px 1px, rgba(28,96,239,0.10) 1px, transparent 0) 0 0 / 22px 22px, var(--white);
+    }
+    .canvas-inner { position: relative; }
+    .canvas-inner svg { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+    .rnode {
+        position: absolute;
+        width: 150px;
+        border-radius: 12px;
+        border: 2px solid var(--blue-light);
+        background: var(--white);
+        box-shadow: 0 4px 10px rgba(28,96,239,0.10);
+        padding: 8px 10px;
+        cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .rnode:hover { border-color: var(--blue); }
+    .rnode.selected { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
+    .rnode.forbid { border-color: var(--red); background: var(--red-light); }
+    .rnode.goal { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-light); }
+    .rnode.clicked-order { border-color: var(--blue); }
+    .rnode.visited-seq:not(.forbid):not(.goal) { background: var(--blue); }
+    .rnode.visited-seq:not(.forbid):not(.goal) .rc-row,
+    .rnode.visited-seq:not(.forbid):not(.goal) .rc-side,
+    .rnode.visited-seq:not(.forbid):not(.goal) .rc-items { color: #fff !important; }
+    .rnode.visited-seq { box-shadow: 0 0 0 3px rgba(28,96,239,0.35); }
+
+    .rc-badge {
+        position: absolute; top: -10px; left: 8px; font-size: 10px; font-weight: 700;
+        padding: 2px 8px; border-radius: 999px; white-space: nowrap; z-index: 3;
+    }
+    .rc-row { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-muted); line-height: 1.5; }
+    .rc-side { font-weight: 700; color: var(--text); width: 34px; flex-shrink: 0; }
+    .rc-items { letter-spacing: 2px; font-weight: 700; color: var(--blue); }
+    .rnode.forbid .rc-items, .rnode.forbid .rc-side { display: none; }
+    .rc-forbid-text { display: none; font-size: 12px; font-weight: 700; color: #b91c1c; text-align: center; padding: 6px 0; }
+    .rnode.forbid .rc-forbid-text { display: block; }
+    .rc-forbid-text .sub { display: block; font-size: 10.5px; font-weight: 400; color: #b91c1c; margin-top: 2px; }
+    .rnode.goal .rc-forbid-text { display: block; color: #92700c; }
+    .rnode.goal .rc-forbid-text .sub { color: #92700c; }
+    .rnode.goal .rc-row { display: none; }
+
+    .order-badge {
+        position: absolute; top: -10px; right: -8px; background: var(--text); color: var(--white);
+        font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 18px; height: 18px;
+        display: flex; align-items: center; justify-content: center; padding: 0 4px; z-index: 4;
+    }
+
+    .drag-handle {
+        position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
+        width: 18px; height: 18px; border-radius: 50%; background: var(--blue);
+        border: 2px solid var(--white); cursor: grab; z-index: 4; box-shadow: 0 2px 6px rgba(28,96,239,0.4);
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    .choice-pop, .confirm-pop {
+        position: absolute; z-index: 12; background: var(--text); color: var(--white);
+        border-radius: 10px; padding: 8px; font-size: 12px; box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+        display: flex; flex-direction: column; gap: 4px; min-width: 190px;
+    }
+    .choice-pop .choice-title { font-size: 10.5px; color: #b9c4e6; padding: 0 4px 2px; }
+    .choice-pop button {
+        font-family: var(--font-body); font-weight: 700; font-size: 12px; text-align: left;
+        border: 0; border-radius: 6px; padding: 7px 9px; cursor: pointer; background: rgba(255,255,255,0.08); color: #fff;
+    }
+    .choice-pop button:hover { background: var(--blue); }
+    .choice-pop button.is-forbid:hover { background: var(--red); }
+    .choice-pop button.is-goal:hover { background: var(--gold); }
+    .confirm-pop { flex-direction: row; align-items: center; gap: 8px; }
+    .confirm-pop button { font-family: var(--font-body); font-weight: 700; font-size: 11.5px; border: 0; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+    .confirm-pop .yes { background: var(--red); color: #fff; }
+    .confirm-pop .no { background: rgba(255,255,255,0.15); color: #fff; }
+
+    .hint {
+        flex-shrink: 0; border-top: 1px solid var(--blue-light); background: #fbfcff;
+        padding: 9px 16px; font-size: 11.5px; color: var(--text-muted); text-align: center;
+    }
+
+    /* ---------- Right: illustration panel ---------- */
+    .illust-panel { flex: 1; display: flex; flex-direction: column; padding: 18px; gap: 14px; background: #fbfcff; min-width: 220px; }
+    .illust-panel h2 { font-family: var(--font-title); font-size: 13px; margin: 0; color: var(--text); }
+    .illust-scene {
+        position: relative; flex: 1; min-height: 200px; border-radius: 16px; overflow: hidden;
+        background: linear-gradient(180deg, #eaf2ff 0%, #dceaff 100%);
+        border: 1px solid var(--blue-light);
+    }
+    .illust-river {
+        position: absolute; left: 42%; top: 0; bottom: 0; width: 16%;
+        background: repeating-linear-gradient(180deg, #a9c8fa 0 10px, #93b9f5 10px 20px);
+    }
+    .illust-bank { position: absolute; top: 0; bottom: 0; width: 42%; }
+    .illust-bank.left { left: 0; background: #eaf7e4; }
+    .illust-bank.right { right: 0; background: #eaf7e4; }
+    .illust-bank-label {
+        position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+        font-size: 11px; font-weight: 700; color: #4b7a3d; background: rgba(255,255,255,0.8);
+        padding: 2px 8px; border-radius: 999px;
+    }
+    .illust-icon {
+        position: absolute; font-size: 30px; top: 55%; transform: translate(-50%, -50%);
+        transition: left 0.7s cubic-bezier(.4,0,.2,1), top 0.4s ease;
+        filter: drop-shadow(0 3px 4px rgba(0,0,0,0.18));
+    }
+    .illust-boat {
+        position: absolute; font-size: 34px; top: 50%; transform: translate(-50%, -50%) rotate(90deg);
+        transition: left 0.7s cubic-bezier(.4,0,.2,1);
+    }
+    .illust-caption { font-size: 12px; color: var(--text-muted); text-align: center; min-height: 18px; }
+
+    /* ---------- Grading footer ---------- */
+    .seq-footer {
+        display: none; flex-shrink: 0; border-top: 1px solid var(--blue-light); background: #fbfcff;
+        padding: 12px 18px; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .seq-footer.show { display: flex; }
+    .seq-footer .seq-label { font-size: 12px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .seq-track { flex: 1; min-width: 160px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .seq-track .chip {
+        background: var(--blue-light); color: var(--blue); border-radius: 999px; padding: 3px 10px;
+        font-weight: 700; font-size: 12.5px; font-family: var(--font-title);
+    }
+    .seq-track .placeholder { color: #a9b3c7; font-weight: 400; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="topbar">
+        <div>
+            <h1>강 건너기 상태공간 트리 만들기</h1>
+            <div class="sub">보드 아래 파란 점을 드래그해 다음 행동을 골라 자식 상태를 만들어 보세요.</div>
+            <div class="legend">
+                <span class="tag tag-init">● 초기 상태</span>
+                <span class="tag tag-forbid">● 금지 상태</span>
+                <span class="tag tag-goal">● 목표 상태</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="action" id="btn-reset">초기화</button>
+            <button class="action primary" id="btn-finish">트리 완성</button>
+        </div>
+    </div>
+
+    <div class="status-banner" id="status-banner"></div>
+
+    <div class="main-area">
+        <div class="tree-panel">
+            <div class="canvas-outer" id="canvas-outer">
+                <div class="canvas-inner" id="canvas-inner">
+                    <svg id="svg-layer"></svg>
+                </div>
+            </div>
+            <div class="hint" id="hint-text">보드 아래 파란 점을 드래그해서 다음 행동을 선택하면 자식 상태가 생깁니다 (우클릭: 상태 삭제)</div>
+        </div>
+        <div class="illust-panel">
+            <h2 id="illust-title">선택한 상태</h2>
+            <div class="illust-scene">
+                <div class="illust-bank left"><span class="illust-bank-label">왼쪽 강가</span></div>
+                <div class="illust-river"></div>
+                <div class="illust-bank right"><span class="illust-bank-label">오른쪽 강가</span></div>
+                <span class="illust-boat" id="ic-boat">🚣</span>
+                <span class="illust-icon" id="ic-f" title="농부">🧑‍🌾</span>
+                <span class="illust-icon" id="ic-s" title="양">🐑</span>
+                <span class="illust-icon" id="ic-w" title="늑대">🐺</span>
+                <span class="illust-icon" id="ic-c" title="양배추">🥬</span>
+            </div>
+            <div class="illust-caption" id="illust-caption">트리에서 노드를 클릭하면 그 상태가 여기 표시돼요.</div>
+        </div>
+    </div>
+
+    <div class="seq-footer" id="seq-footer">
+        <span class="seq-label">클릭한 순서</span>
+        <div class="seq-track" id="seq-track"><span class="placeholder">노드를 순서대로 클릭하세요</span></div>
+        <button class="action primary" id="btn-grade">채점하기</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    var ACTIONS = ['farmer', 'cabbage', 'sheep', 'wolf'];
+    var ACTION_LABEL = { farmer: '농부만 건넌다', cabbage: '양배추를 옮긴다', sheep: '양을 옮긴다', wolf: '늑대를 옮긴다' };
+    var ACTION_KEY = { cabbage: 'c', sheep: 's', wolf: 'w' };
+
+    function flip(side) { return side === 'L' ? 'R' : 'L'; }
+    function sameState(a, b) { return a.boat === b.boat && a.s === b.s && a.w === b.w && a.c === b.c; }
+    function initialState() { return { boat: 'L', s: 'L', w: 'L', c: 'L' }; }
+    function isGoalState(st) { return st.boat === 'R' && st.s === 'R' && st.w === 'R' && st.c === 'R'; }
+
+    var nodes = {};
+    var seq = 0;
+    var phase = 'build'; // 'build' | 'grade'
+    var selectedId = null;
+    var clickSeq = [];
+
+    function makeRoot() {
+        nodes = {};
+        seq = 0;
+        nodes.root = { id: 'root', parentId: null, state: initialState(), kind: 'ok', x: 0, y: 0, children: [] };
+    }
+    makeRoot();
+
+    var canvasOuter = document.getElementById('canvas-outer');
+    var canvasInner = document.getElementById('canvas-inner');
+    var svg = document.getElementById('svg-layer');
+    var statusBanner = document.getElementById('status-banner');
+    var seqFooter = document.getElementById('seq-footer');
+    var seqTrack = document.getElementById('seq-track');
+    var btnFinish = document.getElementById('btn-finish');
+    var btnReset = document.getElementById('btn-reset');
+    var btnGrade = document.getElementById('btn-grade');
+
+    var BOARD_W = 150, BOARD_H = 78;
+    var LEVEL_H = 130, SLOT_W = 176;
+
+    function ancestorChain(node) {
+        var chain = [];
+        var cur = node;
+        while (cur && cur.parentId !== null) { chain.unshift(cur); cur = nodes[cur.parentId]; }
+        return chain;
+    }
+    function ancestorStates(node) { return ancestorChain(node).map(function (n) { return n.state; }); }
+
+    function classify(parentState, ancestorSts, action) {
+        var applicable, newState;
+        if (action === 'farmer') {
+            applicable = true;
+            newState = { boat: flip(parentState.boat), s: parentState.s, w: parentState.w, c: parentState.c };
+        } else {
+            var key = ACTION_KEY[action];
+            applicable = parentState[key] === parentState.boat;
+            if (!applicable) return null;
+            newState = { boat: flip(parentState.boat), s: parentState.s, w: parentState.w, c: parentState.c };
+            newState[key] = flip(parentState[key]);
+        }
+        if (!applicable) return null;
+
+        var repeat = ancestorSts.concat([parentState]).some(function (s) { return sameState(s, newState); });
+        var farmerSide = newState.boat;
+        var unsafeWS = newState.s === newState.w && newState.s !== farmerSide;
+        var unsafeSC = newState.s === newState.c && newState.s !== farmerSide;
+
+        var kind, label;
+        if (repeat) { kind = 'noop'; label = '금지상태 (변화없음)'; }
+        else if (unsafeWS) { kind = 'wolf-sheep'; label = '금지상태 (양 & 늑대)'; }
+        else if (unsafeSC) { kind = 'sheep-cabbage'; label = '금지상태 (양 & 양배추)'; }
+        else if (isGoalState(newState)) { kind = 'goal'; label = ACTION_LABEL[action] + ' → 목표 상태!'; }
+        else { kind = 'ok'; label = ACTION_LABEL[action]; }
+
+        return { action: action, state: newState, kind: kind, label: label };
+    }
+
+    function branchesFor(node) {
+        if (node.kind !== 'ok') return [];
+        var ancSts = ancestorStates(node);
+        var out = [];
+        ACTIONS.forEach(function (a) {
+            var r = classify(node.state, ancSts, a);
+            if (r) out.push(r);
+        });
+        return out;
+    }
+
+    // ---------- Layout ----------
+    function layout() {
+        var slot = { n: 0 };
+        function assign(node) {
+            if (node.children.length === 0) { node.x = slot.n * SLOT_W; slot.n++; }
+            else {
+                node.children.forEach(function (id) { assign(nodes[id]); });
+                var xs = node.children.map(function (id) { return nodes[id].x; });
+                node.x = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+            }
+            node.y = node.depth_ * LEVEL_H;
+        }
+        // compute depth via BFS
+        var depth = { root: 0 };
+        var q = ['root'];
+        while (q.length) {
+            var id = q.shift();
+            nodes[id].depth_ = depth[id];
+            nodes[id].children.forEach(function (c) { depth[c] = depth[id] + 1; q.push(c); });
+        }
+        assign(nodes.root);
+
+        var outerW = canvasOuter.clientWidth;
+        var treeW = Math.max(slot.n * SLOT_W, SLOT_W);
+        var innerW = Math.max(outerW, treeW + 160);
+        var maxDepth = Math.max.apply(null, Object.keys(nodes).map(function (id) { return nodes[id].depth_; }));
+        var innerH = (maxDepth + 1) * LEVEL_H + 60;
+        var offset = innerW / 2 - (nodes.root.x + BOARD_W / 2);
+        Object.keys(nodes).forEach(function (id) { nodes[id].x += offset; });
+
+        canvasInner.style.width = innerW + 'px';
+        canvasInner.style.height = innerH + 'px';
+        svg.setAttribute('width', innerW);
+        svg.setAttribute('height', innerH);
+    }
+
+    function stateRows(state) {
+        var L = [], R = [];
+        if (state.s === 'L') L.push('양'); else R.push('양');
+        if (state.w === 'L') L.push('늑'); else R.push('늑');
+        if (state.c === 'L') L.push('배'); else R.push('배');
+        return {
+            left: (state.boat === 'L' ? '농 ' : '') + L.join(' '),
+            right: (state.boat === 'R' ? '농 ' : '') + R.join(' ')
+        };
+    }
+
+    function render() {
+        layout();
+        canvasInner.querySelectorAll('.rnode').forEach(function (el) { el.remove(); });
+        svg.innerHTML = '';
+
+        Object.keys(nodes).forEach(function (id) {
+            var node = nodes[id];
+            if (node.parentId !== null) {
+                var parent = nodes[node.parentId];
+                var x1 = parent.x + BOARD_W / 2, y1 = parent.y + BOARD_H + 18;
+                var x2 = node.x + BOARD_W / 2, y2 = node.y + 18;
+                var midY = (y1 + y2) / 2;
+                var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
+                path.setAttribute('stroke', '#9db8f5');
+                path.setAttribute('stroke-width', '2.5');
+                path.setAttribute('fill', 'none');
+                svg.appendChild(path);
+            }
+            renderNode(node);
+        });
+    }
+
+    function renderNode(node) {
+        var el = document.createElement('div');
+        el.className = 'rnode' + (node.kind === 'noop' ? ' forbid' : node.kind === 'wolf-sheep' ? ' forbid' : node.kind === 'sheep-cabbage' ? ' forbid' : node.kind === 'goal' ? ' goal' : '');
+        if (node.id === selectedId) el.classList.add('selected');
+        if (phase === 'grade' && clickSeq.indexOf(node.id) >= 0) el.classList.add('visited-seq');
+        el.style.left = node.x + 'px';
+        el.style.top = (node.y + 18) + 'px';
+        el.dataset.id = node.id;
+
+        if (node.id === 'root') {
+            var b = document.createElement('div');
+            b.className = 'rc-badge tag-init';
+            b.style.background = '#e2e8f0'; b.style.color = '#475569';
+            b.textContent = '초기 상태';
+            el.appendChild(b);
+        } else if (node.kind === 'goal') {
+            var gb = document.createElement('div');
+            gb.className = 'rc-badge tag-goal';
+            gb.style.background = '#fef3c7'; gb.style.color = '#92700c';
+            gb.textContent = '목표 상태';
+            el.appendChild(gb);
+        } else if (node.kind !== 'ok') {
+            var fb = document.createElement('div');
+            fb.className = 'rc-badge tag-forbid';
+            fb.style.background = '#fee2e2'; fb.style.color = '#b91c1c';
+            fb.textContent = '금지 상태';
+            el.appendChild(fb);
+        }
+
+        var rows = stateRows(node.state);
+        var rowL = document.createElement('div');
+        rowL.className = 'rc-row';
+        rowL.innerHTML = '<span class="rc-side">왼쪽</span><span class="rc-items">' + (rows.left || '-') + '</span>';
+        var rowR = document.createElement('div');
+        rowR.className = 'rc-row';
+        rowR.innerHTML = '<span class="rc-side">오른쪽</span><span class="rc-items">' + (rows.right || '-') + '</span>';
+        el.appendChild(rowL);
+        el.appendChild(rowR);
+
+        var forbidText = document.createElement('div');
+        forbidText.className = 'rc-forbid-text';
+        if (node.kind === 'noop') forbidText.innerHTML = '🚫 금지 상태<span class="sub">(변화없음)</span>';
+        else if (node.kind === 'wolf-sheep') forbidText.innerHTML = '🚫 금지 상태<span class="sub">(양 & 늑대)</span>';
+        else if (node.kind === 'sheep-cabbage') forbidText.innerHTML = '🚫 금지 상태<span class="sub">(양 & 양배추)</span>';
+        else if (node.kind === 'goal') forbidText.innerHTML = '🏁 목표 상태<span class="sub">모두 강을 건넜어요!</span>';
+        el.appendChild(forbidText);
+
+        if (phase === 'grade') {
+            var idx = clickSeq.indexOf(node.id);
+            if (idx >= 0) {
+                var ob = document.createElement('div');
+                ob.className = 'order-badge';
+                ob.textContent = idx + 1;
+                el.appendChild(ob);
+            }
+        }
+
+        el.addEventListener('click', function (ev) {
+            if (phase === 'build') {
+                selectedId = node.id;
+                updateIllustration(node.state);
+                render();
+            } else {
+                onGradeClick(node.id);
+            }
+        });
+
+        if (phase === 'build') {
+            el.addEventListener('contextmenu', function (ev) {
+                if (node.id === 'root') return;
+                ev.preventDefault();
+                askDelete(node.id, ev.clientX, ev.clientY);
+            });
+            if (node.kind === 'ok') {
+                var handle = document.createElement('div');
+                handle.className = 'drag-handle';
+                handle.addEventListener('pointerdown', function (ev) { startDrag(node.id, ev); });
+                el.appendChild(handle);
+            }
+        }
+
+        canvasInner.appendChild(el);
+    }
+
+    // ---------- Illustration ----------
+    function updateIllustration(state) {
+        var scene = document.querySelector('.illust-scene');
+        var w = scene.clientWidth || 300;
+        var leftX = w * 0.19, rightX = w * 0.81, boatLeftX = w * 0.34, boatRightX = w * 0.66;
+
+        function place(el, side, laneOffset) {
+            var x = (side === 'L' ? leftX : rightX) + laneOffset;
+            el.style.left = x + 'px';
+        }
+        place(document.getElementById('ic-f'), state.boat, 0);
+        place(document.getElementById('ic-s'), state.s, -22);
+        place(document.getElementById('ic-w'), state.w, 22);
+        place(document.getElementById('ic-c'), state.c, 0);
+        document.getElementById('ic-s').style.top = '75%';
+        document.getElementById('ic-w').style.top = '75%';
+        document.getElementById('ic-c').style.top = '30%';
+        document.getElementById('ic-boat').style.left = (state.boat === 'L' ? boatLeftX : boatRightX) + 'px';
+
+        var caption = document.getElementById('illust-caption');
+        if (isGoalState(state)) caption.textContent = '🏁 모두 강을 건넜습니다! 목표 상태예요.';
+        else caption.textContent = (state.boat === 'L' ? '배가 왼쪽에 있어요.' : '배가 오른쪽에 있어요.');
+    }
+
+    // ---------- Interactions (build phase) ----------
+    var dragState = null, ghostPath = null;
+
+    function startDrag(parentId, ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        var handle = ev.currentTarget;
+        dragState = { parentId: parentId, handle: handle };
+        try { handle.setPointerCapture(ev.pointerId); } catch (e) {}
+        ghostPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        ghostPath.setAttribute('stroke', '#94a3b8'); ghostPath.setAttribute('stroke-width', '2.5');
+        ghostPath.setAttribute('stroke-dasharray', '5,5'); ghostPath.setAttribute('fill', 'none');
+        svg.appendChild(ghostPath);
+        handle.addEventListener('pointermove', onDragMove);
+        handle.addEventListener('pointerup', onDragEnd);
+        window.addEventListener('pointermove', onDragMove);
+        window.addEventListener('pointerup', onDragEnd);
+    }
+
+    function autoScrollNearEdge(clientY) {
+        var rect = canvasOuter.getBoundingClientRect();
+        var margin = 50;
+        if (clientY < rect.top + margin) canvasOuter.scrollTop -= (margin - (clientY - rect.top)) * 0.5;
+        else if (clientY > rect.bottom - margin) canvasOuter.scrollTop += (margin - (rect.bottom - clientY)) * 0.5;
+    }
+
+    function onDragMove(ev) {
+        if (!dragState) return;
+        autoScrollNearEdge(ev.clientY);
+        var parent = nodes[dragState.parentId];
+        var rect = canvasInner.getBoundingClientRect();
+        var x1 = parent.x + BOARD_W / 2, y1 = parent.y + BOARD_H + 18;
+        var x2 = ev.clientX - rect.left, y2 = ev.clientY - rect.top;
+        var midY = (y1 + y2) / 2;
+        ghostPath.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2);
+    }
+
+    function onDragEnd(ev) {
+        var handle = dragState && dragState.handle;
+        if (handle) {
+            handle.removeEventListener('pointermove', onDragMove);
+            handle.removeEventListener('pointerup', onDragEnd);
+            try { handle.releasePointerCapture(ev.pointerId); } catch (e) {}
+        }
+        window.removeEventListener('pointermove', onDragMove);
+        window.removeEventListener('pointerup', onDragEnd);
+        if (ghostPath) { ghostPath.remove(); ghostPath = null; }
+        if (!dragState) return;
+        var parentId = dragState.parentId;
+        dragState = null;
+        var rect = canvasOuter.getBoundingClientRect();
+        var withinY = ev.clientY >= rect.top - 40 && ev.clientY <= rect.bottom + 400;
+        if (!withinY) return;
+        openChoiceMenu(parentId, ev.clientX, ev.clientY);
+    }
+
+    function openChoiceMenu(parentId, clientX, clientY) {
+        document.querySelectorAll('.choice-pop, .confirm-pop').forEach(function (p) { p.remove(); });
+        var node = nodes[parentId];
+        var options = branchesFor(node);
+        if (options.length === 0) return;
+        var rect = canvasInner.getBoundingClientRect();
+        var pop = document.createElement('div');
+        pop.className = 'choice-pop';
+        pop.style.left = (clientX - rect.left) + 'px';
+        pop.style.top = (clientY - rect.top) + 'px';
+        var title = document.createElement('div');
+        title.className = 'choice-title';
+        title.textContent = '어떤 행동을 할까요?';
+        pop.appendChild(title);
+        options.forEach(function (opt) {
+            var btn = document.createElement('button');
+            btn.textContent = opt.label;
+            if (opt.kind === 'goal') btn.className = 'is-goal';
+            else if (opt.kind !== 'ok') btn.className = 'is-forbid';
+            btn.addEventListener('click', function () {
+                createChild(parentId, opt);
+                pop.remove();
+            });
+            pop.appendChild(btn);
+        });
+        canvasInner.appendChild(pop);
+        setTimeout(function () {
+            document.addEventListener('pointerdown', function onAway(ev2) {
+                if (!pop.contains(ev2.target)) pop.remove();
+                document.removeEventListener('pointerdown', onAway);
+            });
+        }, 0);
+    }
+
+    function createChild(parentId, opt) {
+        var parent = nodes[parentId];
+        var id = 'n' + (++seq);
+        var node = { id: id, parentId: parentId, state: opt.state, kind: opt.kind, x: 0, y: 0, children: [] };
+        nodes[id] = node;
+        parent.children.push(id);
+        selectedId = id;
+        updateIllustration(opt.state);
+        clearBanner();
+        render();
+    }
+
+    function askDelete(nodeId, clientX, clientY) {
+        document.querySelectorAll('.confirm-pop, .choice-pop').forEach(function (p) { p.remove(); });
+        var rect = canvasInner.getBoundingClientRect();
+        var pop = document.createElement('div');
+        pop.className = 'confirm-pop';
+        pop.style.left = (clientX - rect.left) + 'px';
+        pop.style.top = (clientY - rect.top) + 'px';
+        pop.innerHTML = '<span>이 상태를 삭제할까요?</span>';
+        var yes = document.createElement('button'); yes.className = 'yes'; yes.textContent = '삭제';
+        yes.addEventListener('click', function () { deleteNode(nodeId); pop.remove(); render(); });
+        var no = document.createElement('button'); no.className = 'no'; no.textContent = '취소';
+        no.addEventListener('click', function () { pop.remove(); });
+        pop.appendChild(yes); pop.appendChild(no);
+        canvasInner.appendChild(pop);
+        setTimeout(function () {
+            document.addEventListener('pointerdown', function onAway(ev2) {
+                if (!pop.contains(ev2.target)) pop.remove();
+                document.removeEventListener('pointerdown', onAway);
+            });
+        }, 0);
+    }
+
+    function deleteNode(nodeId) {
+        var node = nodes[nodeId];
+        if (!node || node.id === 'root') return;
+        node.children.slice().forEach(deleteNode);
+        var parent = nodes[node.parentId];
+        parent.children = parent.children.filter(function (id) { return id !== nodeId; });
+        if (selectedId === nodeId) selectedId = null;
+        delete nodes[nodeId];
+    }
+
+    // ---------- Grading phase ----------
+    function computeCanonicalPath() {
+        var path = [];
+        var found = false;
+        function visit(id) {
+            if (found) return;
+            var node = nodes[id];
+            path.push(id);
+            if (node.kind === 'goal') { found = true; return; }
+            node.children.forEach(function (c) {
+                if (found) return;
+                var child = nodes[c];
+                if (child.kind === 'ok' || child.kind === 'goal') visit(c);
+            });
+        }
+        visit('root');
+        return path;
+    }
+
+    function onGradeClick(nodeId) {
+        if (graded) return;
+        if (clickSeq.indexOf(nodeId) >= 0) return;
+        clickSeq.push(nodeId);
+        renderSeqFooter();
+        render();
+    }
+
+    var graded = false;
+
+    function renderSeqFooter() {
+        if (clickSeq.length === 0) {
+            seqTrack.innerHTML = '<span class="placeholder">노드를 순서대로 클릭하세요</span>';
+            return;
+        }
+        seqTrack.innerHTML = clickSeq.map(function (id, i) { return '<span class="chip">' + (i + 1) + '</span>'; }).join('<span style="color:#a9b3c7">→</span>');
+    }
+
+    function clearBanner() {
+        statusBanner.className = 'status-banner';
+        statusBanner.textContent = '';
+    }
+
+    btnFinish.addEventListener('click', function () {
+        if (phase !== 'build') return;
+        var canonical = computeCanonicalPath();
+        var hasGoal = canonical.length > 0 && nodes[canonical[canonical.length - 1]].kind === 'goal';
+        phase = 'grade';
+        selectedId = null;
+        clickSeq = [];
+        graded = false;
+        btnFinish.disabled = true;
+        seqFooter.classList.add('show');
+        document.querySelector('.illust-panel').style.display = 'none';
+        document.querySelector('.tree-panel').style.flex = '1';
+        clearBanner();
+        statusBanner.className = 'status-banner show info';
+        statusBanner.textContent = hasGoal
+            ? '이제 트리를 깊이 우선 탐색 순서대로 클릭해 보세요. 목표 상태까지 도달하면 "채점하기"를 누르세요.'
+            : '이 트리에는 목표 상태로 이어지는 가지가 없어요. "채점하기"를 누르면 만든 노드 전체 순서로 채점합니다.';
+        render();
+    });
+
+    btnGrade.addEventListener('click', function () {
+        if (phase !== 'grade' || graded) return;
+        graded = true;
+        var canonical = computeCanonicalPath();
+        var isRight = canonical.length === clickSeq.length && canonical.every(function (id, i) { return id === clickSeq[i]; });
+        if (isRight) {
+            statusBanner.className = 'status-banner show ok';
+            statusBanner.textContent = '정답입니다! 깊이 우선 탐색 순서를 정확히 클릭했어요 🎉';
+            if (typeof confetti === 'function') confetti({ particleCount: 90, spread: 70, origin: { x: 0.5, y: 0.4 } });
+        } else {
+            statusBanner.className = 'status-banner show bad';
+            statusBanner.textContent = '아쉬워요, 순서가 정확하지 않아요. (' + canonical.length + '단계 중 ' + clickSeq.length + '단계 클릭함) — 초기화 후 다시 시도해 보세요.';
+        }
+        render();
+    });
+
+    btnReset.addEventListener('click', function () {
+        makeRoot();
+        phase = 'build';
+        selectedId = null;
+        clickSeq = [];
+        graded = false;
+        btnFinish.disabled = false;
+        seqFooter.classList.remove('show');
+        document.querySelector('.illust-panel').style.display = '';
+        document.querySelector('.tree-panel').style.flex = '1.35';
+        clearBanner();
+        updateIllustration(initialState());
+        render();
+    });
+
+    window.addEventListener('resize', render);
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () { render(); }).observe(canvasOuter);
+    }
+
+    updateIllustration(initialState());
+    render();
+})();
+</script>
+</body>
+</html>
