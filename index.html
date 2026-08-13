@@ -17,7 +17,7 @@
     <button class="tab-btn" data-tab="search-tree">탐색 트리</button>
     <button class="tab-btn" data-tab="dfs-bfs">깊이 우선 탐색 &amp; 너비 우선 탐색</button>
     <button class="tab-btn" data-tab="hill">언덕 등반 탐색</button>
-    <button class="tab-btn disabled" data-tab="best">최상 우선 탐색<span class="soon-badge">준비중</span></button>
+    <button class="tab-btn" data-tab="best">최상 우선 탐색</button>
     <button class="tab-btn disabled" data-tab="astar">A* 알고리즘<span class="soon-badge">준비중</span></button>
     <button class="tab-btn disabled" data-tab="reasoning">추론<span class="soon-badge">준비중</span></button>
 </nav>
@@ -71,11 +71,11 @@
                             <span class="tax-name">언덕 등반 탐색</span>
                             <span class="tax-en">HCS · Hill Climbing Search</span>
                         </a>
-                        <div class="tax-item soon">
+                        <a class="tax-item" href="#best" data-goto="best">
                             <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
                             <span class="tax-name">최상 우선 탐색</span>
                             <span class="tax-en">Best First Search</span>
-                        </div>
+                        </a>
                         <div class="tax-item soon">
                             <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
                             <span class="tax-name">A* 알고리즘</span>
@@ -392,6 +392,54 @@
 
                         <div class="sim-frame-wrap" style="margin-top:18px;">
                             <iframe src="simulators/hill-climbing.html" title="언덕 등반 탐색 — 8-Puzzle" style="height:760px; min-height:0;"></iframe>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 최상 우선 탐색 -->
+    <section id="tab-best" class="tab-panel">
+        <div class="algo-head">
+            <h2>최상 우선 탐색</h2>
+            <span class="algo-en">Best-First Search</span>
+        </div>
+        <p class="algo-desc">
+            최상 우선 탐색(Best-First Search)은 언덕 등반 탐색을 개선한 <strong>정보 이용 탐색</strong>입니다.
+            평가 함수와 <strong>OPEN 리스트(아직 탐색하지 않은 후보) · CLOSE 리스트(탐색이 끝난 상태)</strong>를 사용해,
+            매 단계마다 OPEN 리스트에 있는 모든 후보 중 평가 함숫값이 가장 좋은 노드를 선택합니다.
+            언덕 등반 탐색은 한 번 지나친 형제 노드를 다시 고려하지 않지만, 최상 우선 탐색은 선택되지 못한 노드도 OPEN 리스트에 남겨 두고
+            <strong>계속 비교하며 다시 선택할 수 있다</strong>는 점이 가장 큰 차이입니다.
+        </p>
+
+        <div class="accordion">
+            <div class="accordion-item open" data-accordion-item>
+                <button class="accordion-trigger" data-accordion-trigger>
+                    <span class="accordion-trigger-title">
+                        <span class="kr">부산 → 서울 길찾기</span>
+                        <span class="en">Best-First Search — OPEN &amp; CLOSE List</span>
+                    </span>
+                    <span class="accordion-chevron"></span>
+                </button>
+                <div class="accordion-panel">
+                    <div class="accordion-body">
+
+                        <div class="rule-block">
+                            <h4>문제 &amp; 규칙</h4>
+                            <ul>
+                                <li>탐색을 시작하면 시작 노드는 곧바로 <strong>CLOSE 리스트</strong>에 들어가고, 그 자식 노드들이 <strong>OPEN 리스트</strong>에 추가됩니다.</li>
+                                <li>평가 함숫값 <strong>f(n)</strong>은 그 노드에서 목표 상태까지 걸리는 <strong>예상 비용(시간)</strong>이며, <strong>값이 작을수록 더 좋은</strong> 노드입니다.</li>
+                                <li>매 단계, OPEN 리스트에 있는 노드 중 <strong>f(n)이 가장 작은 노드</strong>를 클릭하세요. 그 노드는 CLOSE 리스트로 옮겨지고, 자식 노드들이 새로 OPEN 리스트에 추가됩니다.</li>
+                                <li>한 번 지나친 노드(예: 상대적으로 f(n)이 나빴던 형제 노드)도 <strong>OPEN 리스트에 남아 있는 한 다시 선택될 수 있습니다.</strong> — 언덕 등반 탐색과 다른 점입니다.</li>
+                                <li>노란 점선 노드가 <strong>목표 상태</strong>입니다. 목표 상태가 OPEN 리스트에서 선택되면(f(n) = 0) 탐색이 종료됩니다.</li>
+                                <li><strong>연습 문제 불러오기</strong>를 누르면 새로운 트리와 평가 함숫값으로 다시 연습할 수 있습니다.</li>
+                            </ul>
+                        </div>
+
+                        <div class="sim-frame-wrap" style="margin-top:16px;">
+                            <iframe src="simulators/best-first.html" title="최상 우선 탐색 — OPEN·CLOSE 리스트" style="height:720px; min-height:0;"></iframe>
                         </div>
 
                     </div>
