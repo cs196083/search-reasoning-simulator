@@ -16,7 +16,7 @@
     <button class="tab-btn" data-tab="home">홈</button>
     <button class="tab-btn" data-tab="search-tree">탐색 트리</button>
     <button class="tab-btn" data-tab="dfs-bfs">깊이 우선 탐색 &amp; 너비 우선 탐색</button>
-    <button class="tab-btn disabled" data-tab="hill">언덕 등반 탐색<span class="soon-badge">준비중</span></button>
+    <button class="tab-btn" data-tab="hill">언덕 등반 탐색</button>
     <button class="tab-btn disabled" data-tab="best">최상 우선 탐색<span class="soon-badge">준비중</span></button>
     <button class="tab-btn disabled" data-tab="astar">A* 알고리즘<span class="soon-badge">준비중</span></button>
     <button class="tab-btn disabled" data-tab="reasoning">추론<span class="soon-badge">준비중</span></button>
@@ -66,11 +66,11 @@
                         <span class="en">informed search</span>
                     </div>
                     <div class="tax-items">
-                        <div class="tax-item soon">
+                        <a class="tax-item" href="#hill" data-goto="hill">
                             <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
                             <span class="tax-name">언덕 등반 탐색</span>
                             <span class="tax-en">HCS · Hill Climbing Search</span>
-                        </div>
+                        </a>
                         <div class="tax-item soon">
                             <span class="tax-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"></line></svg></span>
                             <span class="tax-name">최상 우선 탐색</span>
@@ -325,6 +325,73 @@
 
                         <div class="sim-frame-wrap" style="margin-top:18px;">
                             <iframe src="simulators/water-jug.html" title="4L 만들기 상태공간 트리 만들기" style="height:800px; min-height:0;"></iframe>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 언덕 등반 탐색 -->
+    <section id="tab-hill" class="tab-panel">
+        <div class="algo-head">
+            <h2>언덕 등반 탐색</h2>
+            <span class="algo-en">Hill Climbing Search</span>
+        </div>
+        <p class="algo-desc">
+            언덕 등반 탐색은 목표에 대한 정보(평가 함숫값)를 이용해 유리한 쪽부터 살피는 <strong>정보 이용 탐색</strong>입니다.
+            현재 상태에서 만들 수 있는 이웃 상태들의 평가 함숫값을 모두 구한 뒤, 그중 <strong>가장 높은 값을 가진 상태로만</strong> 이동합니다.
+            현재 상태보다 더 높은 이웃 상태가 하나도 없으면, 목표에 도달하지 못했더라도 그 자리에서 탐색이 멈춥니다. 이를 <strong>지역 최댓값(정체 상태)</strong> 문제라고 합니다.
+        </p>
+
+        <div class="accordion">
+            <div class="accordion-item open" data-accordion-item>
+                <button class="accordion-trigger" data-accordion-trigger>
+                    <span class="accordion-trigger-title">
+                        <span class="kr">8-Puzzle</span>
+                        <span class="en">Hill Climbing — 8-Puzzle</span>
+                    </span>
+                    <span class="accordion-chevron"></span>
+                </button>
+                <div class="accordion-panel">
+                    <div class="accordion-body">
+
+                        <div class="rule-block">
+                            <h4>문제 &amp; 규칙</h4>
+                            <ul>
+                                <li>3×3 판에 숫자 조각 1~8과 빈칸 1개가 놓여 있습니다. 빈칸과 <strong>상하좌우로 맞닿은 숫자 조각</strong>을 빈칸 쪽으로 밀어 옮길 수 있습니다.</li>
+                                <li><strong>평가 함숫값 f(n)</strong>은 목표 상태와 <strong>같은 위치에 놓인 숫자 조각의 개수</strong>입니다. (최댓값 8)</li>
+                                <li>매 단계마다 이동으로 만들 수 있는 <strong>모든 이웃 상태의 f(n)</strong>을 비교하여, <strong>가장 높은 값을 가진 상태</strong>로만 이동합니다.</li>
+                                <li>현재 상태보다 f(n)이 높은 이웃 상태가 <strong>하나도 없으면</strong> 그 자리에서 탐색이 멈춥니다 — <strong>지역 최댓값(정체 상태)</strong>입니다.</li>
+                                <li>f(n) = 8, 즉 숫자 조각 8개가 모두 목표 상태와 같은 위치에 놓이면 <strong>목표 상태</strong>에 도달한 것입니다.</li>
+                            </ul>
+                            <p class="rule-note">📘 보충 자료 — <a href="https://tristanpenman.com/demos/n-puzzle/" target="_blank" rel="noopener">N-퍼즐 탐색 체험하기</a></p>
+                        </div>
+
+                        <div class="hill-preview">
+                            <div class="hill-card">
+                                <div class="river-card-label init">초기 상태</div>
+                                <div class="mini-puzzle">
+                                    <div class="cell">1</div><div class="cell">2</div><div class="cell">3</div>
+                                    <div class="cell">7</div><div class="cell">4</div><div class="cell">5</div>
+                                    <div class="cell blank"></div><div class="cell">8</div><div class="cell">6</div>
+                                </div>
+                                <div class="hill-card-caption">f(n) = 4</div>
+                            </div>
+                            <div class="hill-card">
+                                <div class="river-card-label goal">목표 상태</div>
+                                <div class="mini-puzzle">
+                                    <div class="cell">1</div><div class="cell">2</div><div class="cell">3</div>
+                                    <div class="cell">4</div><div class="cell">5</div><div class="cell">6</div>
+                                    <div class="cell">7</div><div class="cell">8</div><div class="cell blank"></div>
+                                </div>
+                                <div class="hill-card-caption">f(n) = 8</div>
+                            </div>
+                        </div>
+
+                        <div class="sim-frame-wrap" style="margin-top:18px;">
+                            <iframe src="simulators/hill-climbing.html" title="언덕 등반 탐색 — 8-Puzzle" style="height:760px; min-height:0;"></iframe>
                         </div>
 
                     </div>

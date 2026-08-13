@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>언덕 등반 탐색 — 8-Puzzle</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+    @font-face {
+        font-family: 'KIMM';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KIMM_Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-7Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    :root {
+        --white: #FFFFFF;
+        --blue: #1C60EF;
+        --blue-light: #DBE8FE;
+        --text: #16223f;
+        --text-muted: #55647f;
+        --red: #ef4444;
+        --red-light: #fee2e2;
+        --green: #16a34a;
+        --green-light: #dcfce7;
+        --gold: #d4a017;
+        --gold-light: #fef3c7;
+        --font-title: 'KIMM', 'Malgun Gothic', sans-serif;
+        --font-body: 'A2z', 'Malgun Gothic', sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: var(--font-body);
+        color: var(--text);
+        background: var(--white);
+        user-select: none;
+    }
+    .app { display: flex; flex-direction: column; min-height: 100%; }
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: #fbfcff;
+        flex-shrink: 0;
+    }
+    .topbar h1 {
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 15px;
+        margin: 0;
+        color: var(--text);
+    }
+    .topbar .sub {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.action {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 12.5px;
+        border-radius: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--blue-light);
+        background: var(--white);
+        color: var(--blue);
+        cursor: pointer;
+    }
+    button.action:hover { background: var(--blue-light); }
+    button.action.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
+    button.action.primary:hover { background: #164fce; }
+
+    /* ---------- 미션 바 ---------- */
+    .mission {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 10px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: linear-gradient(90deg, var(--blue-light), #eef4ff);
+    }
+    .mission-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--white);
+        border: 1px solid rgba(28,96,239,0.22);
+        border-radius: 999px;
+        padding: 6px 14px;
+        white-space: nowrap;
+    }
+    .mission-chip b { color: var(--blue); font-family: var(--font-title); font-size: 14px; }
+    .goal-mini-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .goal-mini-wrap .mission-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #3f568c;
+    }
+    .mission-hint {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-left: auto;
+    }
+
+    .status-banner {
+        display: none;
+        padding: 9px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .status-banner.show { display: block; }
+    .status-banner.ok { background: var(--gold-light); color: #92700c; }
+    .status-banner.bad { background: var(--red-light); color: #b91c1c; }
+    .status-banner.info { background: var(--blue-light); color: #16419e; }
+
+    /* ---------- 보드 ---------- */
+    .stage {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        padding: 22px 18px 30px;
+    }
+    .stage-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+    }
+
+    .mini-board {
+        display: grid;
+        grid-template-columns: repeat(3, var(--cell));
+        grid-template-rows: repeat(3, var(--cell));
+        gap: var(--gap, 5px);
+    }
+    .mini-board .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--blue-light);
+        color: var(--blue);
+        font-family: var(--font-title);
+        font-weight: 700;
+        border-radius: 10px;
+    }
+    .mini-board .cell.blank {
+        background: #f4f6fb;
+        border: 1.5px dashed #c7d2e8;
+    }
+    .mini-board.big { --cell: 68px; --gap: 6px; }
+    .mini-board.big .cell { font-size: 24px; border-radius: 12px; }
+    .mini-board.tiny { --cell: 20px; --gap: 2px; }
+    .mini-board.tiny .cell { font-size: 9px; border-radius: 3px; }
+    .mini-board.cand { --cell: 46px; --gap: 4px; }
+    .mini-board.cand .cell { font-size: 16px; border-radius: 8px; }
+
+    .current-wrap.pulse .mini-board.big { animation: pulseGoal .5s ease; }
+    @keyframes pulseGoal {
+        0% { transform: scale(1); }
+        40% { transform: scale(1.06); }
+        100% { transform: scale(1); }
+    }
+
+    .arrow-down {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .neighbors-row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        max-width: 640px;
+    }
+
+    .candidate {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 14px;
+        border-radius: 14px;
+        border: 2px solid var(--blue-light);
+        background: var(--white);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .candidate:hover:not(.disabled) {
+        border-color: var(--blue);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(28,96,239,0.15);
+    }
+    .candidate .cand-value {
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 13.5px;
+        color: var(--blue);
+        background: var(--blue-light);
+        padding: 3px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+    .candidate.correct {
+        border-color: var(--green);
+        box-shadow: 0 8px 20px rgba(22,163,74,0.22);
+    }
+    .candidate.correct .cand-value { background: var(--green-light); color: var(--green); }
+    .candidate.wrong {
+        animation: shakeN 0.35s ease;
+        border-color: var(--red);
+    }
+    .candidate.disabled {
+        opacity: 0.42;
+        cursor: not-allowed;
+    }
+    @keyframes shakeN {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+
+    .footer {
+        flex-shrink: 0;
+        border-top: 1px solid var(--blue-light);
+        background: #fbfcff;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .footer .seq-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        flex-shrink: 0;
+    }
+    .seq-track {
+        flex: 1;
+        min-width: 160px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--blue);
+    }
+    .seq-track .chip { background: var(--blue-light); border-radius: 8px; padding: 3px 9px; }
+    .seq-track .arrow { color: #a9b3c7; font-weight: 400; }
+    .seq-track .placeholder { color: #a9b3c7; font-weight: 400; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="topbar">
+        <div>
+            <h1>언덕 등반 탐색 — 8-Puzzle</h1>
+            <div class="sub">이웃 상태 중 평가 함숫값 f(n)이 가장 높은 상태를 선택해 목표까지 이동해 보세요.</div>
+        </div>
+        <div class="controls">
+            <button class="action" id="btn-default">기본 예제</button>
+            <button class="action" id="btn-retry">다시 하기</button>
+            <button class="action primary" id="btn-new">새 문제 불러오기</button>
+        </div>
+    </div>
+
+    <div class="mission">
+        <span class="mission-chip">현재 f(n) <b id="cur-f">4</b> / 8</span>
+        <span class="mission-chip">이동 횟수 <b id="move-count">0</b></span>
+        <div class="goal-mini-wrap">
+            <span class="mission-label">목표 상태</span>
+            <div class="mini-board tiny" id="goal-board"></div>
+        </div>
+        <span class="mission-hint" id="mission-hint">이웃 상태 중 평가 값이 가장 높은 상태를 클릭하세요.</span>
+    </div>
+
+    <div class="status-banner" id="status-banner"></div>
+
+    <div class="stage">
+        <div class="stage-label">현재 상태</div>
+        <div class="current-wrap" id="current-wrap">
+            <div class="mini-board big" id="current-board"></div>
+        </div>
+        <div class="arrow-down">▼ 이웃 상태 — 평가 값이 가장 높은 상태를 클릭하세요</div>
+        <div class="neighbors-row" id="neighbors-row"></div>
+    </div>
+
+    <div class="footer">
+        <span class="seq-label">f(n) 이동 이력</span>
+        <div class="seq-track" id="seq-track"></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var GOAL = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+    var DEFAULT_INITIAL = [1, 2, 3, 7, 4, 5, 0, 8, 6];
+
+    var curBoardEl = document.getElementById('current-board');
+    var currentWrap = document.getElementById('current-wrap');
+    var goalBoardEl = document.getElementById('goal-board');
+    var neighborsRow = document.getElementById('neighbors-row');
+    var curFEl = document.getElementById('cur-f');
+    var moveCountEl = document.getElementById('move-count');
+    var statusBanner = document.getElementById('status-banner');
+    var seqTrack = document.getElementById('seq-track');
+    var missionHint = document.getElementById('mission-hint');
+
+    var state, initialState, moveCount, history, finished;
+
+    function fn(s) {
+        var c = 0;
+        for (var i = 0; i < 9; i++) { if (s[i] !== 0 && s[i] === GOAL[i]) c++; }
+        return c;
+    }
+
+    function isGoal(s) { return fn(s) === 8; }
+
+    function blankIdx(s) { return s.indexOf(0); }
+
+    function neighborsOf(s) {
+        var b = blankIdx(s);
+        var r = Math.floor(b / 3), c = b % 3;
+        var dirs = [];
+        if (r > 0) dirs.push(-3);
+        if (r < 2) dirs.push(3);
+        if (c > 0) dirs.push(-1);
+        if (c < 2) dirs.push(1);
+        return dirs.map(function (d) {
+            var t = b + d;
+            var ns = s.slice();
+            ns[b] = s[t]; ns[t] = 0;
+            return { state: ns, value: fn(ns) };
+        });
+    }
+
+    function renderBoard(el, s) {
+        el.innerHTML = '';
+        for (var i = 0; i < 9; i++) {
+            var cell = document.createElement('div');
+            cell.className = 'cell' + (s[i] === 0 ? ' blank' : '');
+            cell.textContent = s[i] === 0 ? '' : s[i];
+            el.appendChild(cell);
+        }
+    }
+
+    function renderSeq() {
+        if (!history.length) {
+            seqTrack.innerHTML = '<span class="placeholder">이동하면 여기에 표시돼요</span>';
+            return;
+        }
+        seqTrack.innerHTML = history.map(function (v, i) {
+            return (i > 0 ? '<span class="arrow">→</span>' : '') + '<span class="chip">' + v + '</span>';
+        }).join('');
+    }
+
+    function setBanner(kind, text) {
+        statusBanner.className = 'status-banner' + (kind ? ' show ' + kind : '');
+        statusBanner.textContent = text || '';
+    }
+
+    function render() {
+        renderBoard(curBoardEl, state);
+        curFEl.textContent = fn(state);
+        moveCountEl.textContent = moveCount;
+        renderSeq();
+        renderNeighbors();
+    }
+
+    function renderNeighbors() {
+        neighborsRow.innerHTML = '';
+
+        if (finished) {
+            missionHint.textContent = '목표 상태에 도달했습니다. 다른 문제도 도전해 보세요.';
+            return;
+        }
+
+        var neighbors = neighborsOf(state);
+        var curVal = fn(state);
+        var maxVal = Math.max.apply(null, neighbors.map(function (n) { return n.value; }));
+        var stuck = maxVal <= curVal;
+
+        neighbors.forEach(function (n) {
+            var card = document.createElement('div');
+            card.className = 'candidate' + (stuck ? ' disabled' : '');
+
+            var board = document.createElement('div');
+            board.className = 'mini-board cand';
+            renderBoard(board, n.state);
+
+            var label = document.createElement('div');
+            label.className = 'cand-value';
+            label.textContent = 'f(n) = ' + n.value;
+
+            card.appendChild(board);
+            card.appendChild(label);
+
+            if (!stuck) {
+                card.addEventListener('click', function () { onPick(n, maxVal, card); });
+            }
+            neighborsRow.appendChild(card);
+        });
+
+        if (stuck) {
+            setBanner('bad', '정체 상태(지역 최댓값)에 빠졌습니다 — 모든 이웃 상태의 f(n)이 현재 상태(' + curVal + ')보다 낮거나 같아 더 이상 나아갈 수 없어요.');
+            missionHint.textContent = '다시 하기 또는 새 문제 불러오기를 눌러 새로 시작해 보세요.';
+        } else {
+            setBanner('', '');
+            missionHint.textContent = '이웃 상태 중 평가 값이 가장 높은 상태를 클릭하세요.';
+        }
+    }
+
+    function onPick(n, maxVal, card) {
+        if (finished) return;
+        if (n.value < maxVal) {
+            card.classList.remove('wrong');
+            void card.offsetWidth;
+            card.classList.add('wrong');
+            setBanner('bad', '이 상태보다 f(n)이 더 높은 이웃 상태가 있어요. 다시 골라보세요.');
+            return;
+        }
+        card.classList.add('correct');
+        Array.prototype.forEach.call(neighborsRow.children, function (el) {
+            if (el !== card) el.classList.add('disabled');
+        });
+
+        state = n.state;
+        moveCount++;
+        history.push(n.value);
+
+        setTimeout(function () {
+            currentWrap.classList.remove('pulse');
+            void currentWrap.offsetWidth;
+            currentWrap.classList.add('pulse');
+            render();
+            if (isGoal(state)) {
+                finished = true;
+                setBanner('ok', '🎉 목표 상태에 도달했습니다! 총 ' + moveCount + '번 만에 언덕을 다 올랐어요.');
+                fireConfetti();
+            }
+        }, 260);
+    }
+
+    function fireConfetti() {
+        if (typeof confetti !== 'function') return;
+        confetti({ particleCount: 90, spread: 70, origin: { x: 0.5, y: 0.4 } });
+    }
+
+    function loadState(s) {
+        initialState = s.slice();
+        state = s.slice();
+        moveCount = 0;
+        history = [fn(state)];
+        finished = false;
+        render();
+    }
+
+    function loadDefault() {
+        loadState(DEFAULT_INITIAL);
+        setBanner('info', '교과서 기본 예제입니다. f(n)이 가장 높은 이웃 상태를 골라 목표까지 이동해 보세요.');
+    }
+
+    function retry() {
+        state = initialState.slice();
+        moveCount = 0;
+        history = [fn(state)];
+        finished = false;
+        render();
+        setBanner('', '');
+    }
+
+    function randomScramble(steps) {
+        var s = GOAL.slice();
+        var prevBlank = -1;
+        for (var i = 0; i < steps; i++) {
+            var b = blankIdx(s);
+            var neigh = neighborsOf(s);
+            var options = neigh.filter(function (n) { return blankIdx(n.state) !== prevBlank; });
+            if (!options.length) options = neigh;
+            var pick = options[Math.floor(Math.random() * options.length)];
+            prevBlank = b;
+            s = pick.state;
+        }
+        return s;
+    }
+
+    function loadRandom() {
+        var s, tries = 0;
+        do {
+            var steps = 4 + Math.floor(Math.random() * 3); // 4~6수 섞기
+            s = randomScramble(steps);
+            tries++;
+        } while (isGoal(s) && tries < 20);
+        loadState(s);
+        setBanner('info', '새 문제가 출제되었습니다. f(n) = ' + fn(s) + '에서 시작합니다.');
+    }
+
+    document.getElementById('btn-default').addEventListener('click', loadDefault);
+    document.getElementById('btn-retry').addEventListener('click', retry);
+    document.getElementById('btn-new').addEventListener('click', loadRandom);
+
+    renderBoard(goalBoardEl, GOAL);
+    loadDefault();
+})();
+</script>
+</body>
+</html>

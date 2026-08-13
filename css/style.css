@@ -912,6 +912,73 @@ a.tax-item:hover {
     color: var(--text-muted);
 }
 
+/* ---------- Rule block link note ---------- */
+
+.rule-block .rule-note {
+    margin: 14px 0 0;
+    font-size: 12.5px;
+    color: var(--text-muted);
+}
+
+.rule-block .rule-note a {
+    color: var(--blue);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.rule-block .rule-note a:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Hill climbing (8-Puzzle) preview cards ---------- */
+
+.hill-preview {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.hill-card {
+    background: var(--white);
+    border: 1px solid var(--blue-light);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.mini-puzzle {
+    display: grid;
+    grid-template-columns: repeat(3, 38px);
+    grid-template-rows: repeat(3, 38px);
+    gap: 4px;
+}
+
+.mini-puzzle .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--blue-light);
+    color: var(--blue);
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: 7px;
+}
+
+.mini-puzzle .cell.blank {
+    background: #f4f6fb;
+    border: 1.5px dashed #c7d2e8;
+}
+
+.hill-card-caption {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
 /* ---------- Footer ---------- */
 
 .site-footer {
