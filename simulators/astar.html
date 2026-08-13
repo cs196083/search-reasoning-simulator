@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A* 알고리즘 — g(n) + h(n)</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+    @font-face {
+        font-family: 'KIMM';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KIMM_Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'A2z';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/%EC%97%90%EC%9D%B4%ED%88%AC%EC%A7%80%EC%B2%B4-7Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    :root {
+        --white: #FFFFFF;
+        --blue: #1C60EF;
+        --blue-light: #DBE8FE;
+        --text: #16223f;
+        --text-muted: #55647f;
+        --red: #ef4444;
+        --red-light: #fee2e2;
+        --green: #16a34a;
+        --green-light: #dcfce7;
+        --gold: #d4a017;
+        --gold-light: #fef3c7;
+        --purple: #7c3aed;
+        --purple-light: #ede9fe;
+        --orange: #c2560c;
+        --font-title: 'KIMM', 'Malgun Gothic', sans-serif;
+        --font-body: 'A2z', 'Malgun Gothic', sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: var(--font-body);
+        color: var(--text);
+        background: var(--white);
+        overflow: hidden;
+        user-select: none;
+    }
+    .app { display: flex; flex-direction: column; height: 100%; }
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: #fbfcff;
+        flex-shrink: 0;
+    }
+    .topbar h1 {
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 15px;
+        margin: 0;
+        color: var(--text);
+    }
+    .topbar .sub {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.action {
+        font-family: var(--font-body);
+        font-weight: 700;
+        font-size: 12.5px;
+        border-radius: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--blue-light);
+        background: var(--white);
+        color: var(--blue);
+        cursor: pointer;
+    }
+    button.action:hover { background: var(--blue-light); }
+    button.action.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
+    button.action.primary:hover { background: #164fce; }
+
+    .mission {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 10px 18px;
+        border-bottom: 1px solid var(--blue-light);
+        background: linear-gradient(90deg, var(--blue-light), #eef4ff);
+    }
+    .mission-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--white);
+        border: 1px solid rgba(28,96,239,0.22);
+        border-radius: 999px;
+        padding: 6px 14px;
+        white-space: nowrap;
+    }
+    .mission-chip .goal-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 2px dashed var(--gold);
+    }
+    .mission-chip.formula { background: var(--purple-light); border-color: rgba(124,58,237,0.28); color: #5222b3; }
+    .mission-hint {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-left: auto;
+    }
+
+    .status-banner {
+        display: none;
+        padding: 9px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .status-banner.show { display: block; }
+    .status-banner.ok { background: var(--gold-light); color: #92700c; }
+    .status-banner.bad { background: var(--red-light); color: #b91c1c; }
+    .status-banner.info { background: var(--blue-light); color: #16419e; }
+
+    .canvas-outer {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+        background:
+            radial-gradient(circle at 1px 1px, rgba(28,96,239,0.10) 1px, transparent 0) 0 0 / 22px 22px,
+            var(--white);
+    }
+    .canvas-inner { position: relative; }
+    .canvas-inner svg { position: absolute; top: 0; left: 0; pointer-events: none; }
+    .canvas-inner svg text {
+        font-family: var(--font-body);
+        font-size: 10.5px;
+        font-weight: 700;
+        fill: var(--orange);
+    }
+
+    .tnode {
+        position: absolute;
+        width: 88px;
+        min-height: 60px;
+        border-radius: 14px;
+        border: 2.5px solid #d7e0f5;
+        background: var(--white);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+        padding: 5px 4px;
+        cursor: default;
+        transition: all 0.15s ease;
+        box-shadow: 0 3px 8px rgba(28,96,239,0.08);
+        opacity: 0.38;
+    }
+    .tnode .nm {
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 12.5px;
+        color: var(--text);
+        white-space: nowrap;
+    }
+    .tnode .ghv {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+    .tnode .fv {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+    .tnode.open {
+        opacity: 1;
+        border-color: var(--blue);
+        cursor: pointer;
+        box-shadow: 0 6px 14px rgba(28,96,239,0.18);
+    }
+    .tnode.open:hover { transform: translateY(-2px); border-color: #123fa8; }
+    .tnode.open .fv { color: var(--blue); }
+    .tnode.closed {
+        opacity: 1;
+        background: var(--text);
+        border-color: var(--text);
+    }
+    .tnode.closed .nm, .tnode.closed .ghv, .tnode.closed .fv { color: var(--white); }
+    .tnode.goal-marker { border-style: dashed; }
+    .tnode.open.goal-marker { border-color: var(--gold); }
+    .tnode.closed.goal-marker { background: var(--gold); border-color: var(--gold); }
+    .tnode.wrong { animation: shakeN 0.35s ease; border-color: var(--red) !important; }
+    .tnode .order-badge {
+        position: absolute;
+        top: -9px;
+        right: -6px;
+        background: var(--purple);
+        color: var(--white);
+        font-size: 9.5px;
+        font-weight: 700;
+        border-radius: 999px;
+        width: 17px;
+        height: 17px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    @keyframes shakeN {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+    }
+
+    .footer {
+        flex-shrink: 0;
+        border-top: 1px solid var(--blue-light);
+        background: #fbfcff;
+        padding: 10px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+    .list-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .list-row .list-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        flex-shrink: 0;
+        padding-top: 4px;
+        width: 78px;
+    }
+    .list-row.open-row .list-label { color: var(--blue); }
+    .list-row.close-row .list-label { color: var(--text); }
+    .chip-track {
+        flex: 1;
+        min-width: 160px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+        font-family: var(--font-title);
+        font-weight: 700;
+        font-size: 12px;
+    }
+    .chip-track .chip {
+        border-radius: 8px;
+        padding: 3px 9px;
+    }
+    .chip-track.open-track .chip { background: var(--blue-light); color: var(--blue); }
+    .chip-track.close-track .chip { background: #e7e9ef; color: var(--text); }
+    .chip-track .chip.best { outline: 2px solid var(--gold); }
+    .chip-track .placeholder { color: #a9b3c7; font-weight: 400; font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="topbar">
+        <div>
+            <h1 id="title-text">A* 알고리즘 — 부산 → 서울</h1>
+            <div class="sub">OPEN 리스트에서 f(n) = g(n) + h(n)이 가장 작은 노드를 골라 목표까지 이동해 보세요.</div>
+        </div>
+        <div class="controls">
+            <button class="action" id="btn-default">기본 예제</button>
+            <button class="action" id="btn-retry">다시 하기</button>
+            <button class="action primary" id="btn-new">연습 문제 불러오기</button>
+        </div>
+    </div>
+
+    <div class="mission">
+        <span class="mission-chip formula">f(n) = g(n) + h(n)</span>
+        <span class="mission-chip"><span class="goal-dot"></span>목표 상태 <span id="goal-text">서울</span></span>
+        <span class="mission-chip">선택 횟수 <b id="move-count">0</b></span>
+        <span class="mission-hint" id="mission-hint">OPEN 리스트 중 f(n)이 가장 작은 노드를 클릭하세요.</span>
+    </div>
+
+    <div class="status-banner" id="status-banner"></div>
+
+    <div class="canvas-outer" id="canvas-outer">
+        <div class="canvas-inner" id="canvas-inner">
+            <svg id="svg-layer"></svg>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="list-row open-row">
+            <span class="list-label">OPEN 리스트</span>
+            <div class="chip-track open-track" id="open-track"></div>
+        </div>
+        <div class="list-row close-row">
+            <span class="list-label">CLOSE 리스트</span>
+            <div class="chip-track close-track" id="close-track"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    // ---------- 트리 데이터 ----------
+    // edges: 부모 -> [{id, cost}] (cost = 부모→자식 이동 비용)
+    // h: 각 노드의 휴리스틱(목표까지 예상 비용, 작을수록 좋음). g는 루트로부터의 누적 비용으로 자동 계산한다.
+    // 기본 예제는 교과서 [그림 I-17] 부산→서울 A* 탐색과 동일한 open/close 흐름을 재현한다.
+    // (최상 우선 탐색은 부산→상주→음성→서울로 가지만, A*는 g(n)을 더해 부산→대구→대전→천안→서울의 다른 길을 찾는다.)
+    var DEFAULT_TREE = {
+        name: '부산 → 서울',
+        root: 'busan',
+        goal: 'seoul',
+        label: {
+            busan: '부산', daegu: '대구', sangju: '상주', ulsan: '울산',
+            daejeon: '대전', cheonan: '천안', seoul: '서울'
+        },
+        h: {
+            busan: null, daegu: 240, sangju: 200, ulsan: 340,
+            daejeon: 150, cheonan: 100, seoul: 0
+        },
+        edges: {
+            busan: [{ id: 'daegu', cost: 60 }, { id: 'sangju', cost: 110 }, { id: 'ulsan', cost: 40 }],
+            daegu: [{ id: 'daejeon', cost: 90 }],
+            sangju: [],
+            ulsan: [],
+            daejeon: [{ id: 'cheonan', cost: 50 }],
+            cheonan: [{ id: 'seoul', cost: 100 }],
+            seoul: []
+        }
+    };
+
+    // 연습 문제 — 알파벳 노드에 임의의 간선 비용(cost)과 휴리스틱 h(n)을 부여한 추상 트리
+    var PRACTICE_TREES = [
+        {
+            name: '연습 1',
+            root: 'A', goal: 'H',
+            h: { A: null, B: 40, C: 25, D: 20, E: 30, F: 10, G: 15, H: 0, I: 5 },
+            edges: {
+                A: [{ id: 'B', cost: 5 }, { id: 'C', cost: 9 }],
+                B: [{ id: 'D', cost: 4 }, { id: 'E', cost: 8 }],
+                C: [{ id: 'F', cost: 6 }],
+                D: [],
+                E: [{ id: 'H', cost: 12 }, { id: 'G', cost: 6 }],
+                F: [{ id: 'I', cost: 3 }],
+                G: [], H: [], I: []
+            }
+        },
+        {
+            name: '연습 2',
+            root: 'A', goal: 'I',
+            h: { A: null, B: 35, C: 15, D: 42, E: 20, F: 8, G: 18, H: 22, I: 0, J: 10 },
+            edges: {
+                A: [{ id: 'B', cost: 6 }, { id: 'C', cost: 4 }, { id: 'D', cost: 10 }],
+                B: [{ id: 'E', cost: 5 }],
+                C: [{ id: 'F', cost: 7 }, { id: 'G', cost: 3 }],
+                D: [],
+                E: [{ id: 'H', cost: 9 }],
+                F: [{ id: 'J', cost: 2 }],
+                G: [{ id: 'I', cost: 6 }],
+                H: [], I: [], J: []
+            }
+        },
+        {
+            name: '연습 3',
+            root: 'A', goal: 'G',
+            h: { A: null, B: 18, C: 30, D: 12, E: 25, F: 40, G: 0, H: 15 },
+            edges: {
+                A: [{ id: 'B', cost: 3 }, { id: 'C', cost: 7 }],
+                B: [{ id: 'D', cost: 4 }, { id: 'E', cost: 9 }],
+                C: [{ id: 'F', cost: 5 }],
+                D: [{ id: 'H', cost: 6 }],
+                E: [],
+                F: [{ id: 'G', cost: 8 }],
+                H: []
+            }
+        },
+        {
+            name: '연습 4',
+            root: 'A', goal: 'K',
+            h: { A: null, B: 45, C: 20, D: 33, E: 26, F: 9, G: 14, H: 38, I: 12, J: 6, K: 0 },
+            edges: {
+                A: [{ id: 'B', cost: 8 }, { id: 'C', cost: 5 }, { id: 'D', cost: 11 }],
+                B: [],
+                C: [{ id: 'E', cost: 6 }, { id: 'F', cost: 3 }],
+                D: [{ id: 'G', cost: 7 }],
+                E: [{ id: 'H', cost: 10 }],
+                F: [{ id: 'J', cost: 4 }, { id: 'I', cost: 9 }],
+                G: [{ id: 'K', cost: 5 }],
+                H: [], I: [], J: []
+            }
+        }
+    ];
+
+    var BOARD = 88;
+    var LEVEL_H = 108;
+    var SLOT_W = 106;
+
+    var canvasOuter = document.getElementById('canvas-outer');
+    var canvasInner = document.getElementById('canvas-inner');
+    var svg = document.getElementById('svg-layer');
+    var statusBanner = document.getElementById('status-banner');
+    var openTrack = document.getElementById('open-track');
+    var closeTrack = document.getElementById('close-track');
+    var titleText = document.getElementById('title-text');
+    var goalText = document.getElementById('goal-text');
+    var moveCountEl = document.getElementById('move-count');
+    var missionHint = document.getElementById('mission-hint');
+
+    var current = null;      // {name, root, goal, edges, h, label}
+    var childrenMap = null;  // id -> [id...]  (edges 배열에서 뽑은 자식 id 목록, layout용)
+    var costMap = null;      // "parent|child" -> cost
+    var gMap = null;         // id -> g(n) (루트로부터 누적 비용, 트리이므로 경로가 하나뿐)
+    var positions = {};
+    var openList, closeList, moveCount, finished;
+
+    function label(id) { return (current.label && current.label[id]) || id; }
+    function fOf(id) { return gMap[id] + current.h[id]; }
+
+    function buildMaps() {
+        childrenMap = {};
+        costMap = {};
+        gMap = {};
+        gMap[current.root] = 0;
+        Object.keys(current.edges).forEach(function (p) {
+            childrenMap[p] = (current.edges[p] || []).map(function (e) { return e.id; });
+        });
+        var queue = [current.root];
+        while (queue.length) {
+            var id = queue.shift();
+            (current.edges[id] || []).forEach(function (e) {
+                costMap[id + '|' + e.id] = e.cost;
+                gMap[e.id] = gMap[id] + e.cost;
+                queue.push(e.id);
+            });
+        }
+    }
+
+    function layout(root) {
+        positions = {};
+        var slot = { n: 0 };
+        function assign(id) {
+            var children = childrenMap[id] || [];
+            if (children.length === 0) {
+                positions[id] = { x: slot.n * SLOT_W, y: 0 };
+                slot.n++;
+            } else {
+                children.forEach(assign);
+                var xs = children.map(function (c) { return positions[c].x; });
+                positions[id] = { x: (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, y: 0 };
+            }
+        }
+        assign(root);
+
+        var depth = {};
+        depth[root] = 0;
+        var queue = [root];
+        while (queue.length) {
+            var id = queue.shift();
+            (childrenMap[id] || []).forEach(function (c) {
+                depth[c] = depth[id] + 1;
+                queue.push(c);
+            });
+        }
+        Object.keys(positions).forEach(function (id) { positions[id].y = depth[id] * LEVEL_H; });
+
+        var outerW = canvasOuter.clientWidth;
+        var treeW = Math.max(slot.n * SLOT_W, SLOT_W);
+        var innerW = Math.max(outerW, treeW + 120);
+        var maxDepth = Math.max.apply(null, Object.values(depth));
+        var innerH = (maxDepth + 1) * LEVEL_H + 60;
+        var offset = innerW / 2 - (positions[root].x + BOARD / 2);
+        Object.keys(positions).forEach(function (id) { positions[id].x += offset; });
+
+        canvasInner.style.width = innerW + 'px';
+        canvasInner.style.height = innerH + 'px';
+        svg.setAttribute('width', innerW);
+        svg.setAttribute('height', innerH);
+    }
+
+    function render() {
+        layout(current.root);
+        canvasInner.querySelectorAll('.tnode').forEach(function (el) { el.remove(); });
+        svg.innerHTML = '';
+
+        Object.keys(childrenMap).forEach(function (id) {
+            (childrenMap[id] || []).forEach(function (c) {
+                var p1 = positions[id], p2 = positions[c];
+                var x1 = p1.x + BOARD / 2, y1 = p1.y + 60 + 18;
+                var x2 = p2.x + BOARD / 2, y2 = p2.y + 18;
+                var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke', '#c7d6f9');
+                line.setAttribute('stroke-width', '2.5');
+                svg.appendChild(line);
+
+                var txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                txt.setAttribute('x', (x1 + x2) / 2 + 6);
+                txt.setAttribute('y', (y1 + y2) / 2);
+                txt.textContent = costMap[id + '|' + c];
+                svg.appendChild(txt);
+            });
+        });
+
+        Object.keys(positions).forEach(function (id) {
+            var el = document.createElement('div');
+            var isOpen = openList.indexOf(id) >= 0;
+            var isClosed = closeList.indexOf(id) >= 0;
+            el.className = 'tnode' + (isOpen ? ' open' : '') + (isClosed ? ' closed' : '') + (id === current.goal ? ' goal-marker' : '');
+            el.style.left = positions[id].x + 'px';
+            el.style.top = (positions[id].y + 18) + 'px';
+
+            var nm = document.createElement('div');
+            nm.className = 'nm';
+            nm.textContent = label(id);
+            el.appendChild(nm);
+
+            if (isOpen || isClosed) {
+                var ghv = document.createElement('div');
+                ghv.className = 'ghv';
+                ghv.textContent = 'g=' + gMap[id] + ' h=' + current.h[id];
+                el.appendChild(ghv);
+
+                var fv = document.createElement('div');
+                fv.className = 'fv';
+                fv.textContent = 'f=' + fOf(id);
+                el.appendChild(fv);
+            }
+
+            var closedIdx = closeList.indexOf(id);
+            if (closedIdx >= 0) {
+                var badge = document.createElement('div');
+                badge.className = 'order-badge';
+                badge.textContent = closedIdx + 1;
+                el.appendChild(badge);
+            }
+
+            if (isOpen && !finished) {
+                el.addEventListener('click', function () { onClickOpen(id, el); });
+            }
+            canvasInner.appendChild(el);
+        });
+    }
+
+    function renderLists() {
+        moveCountEl.textContent = moveCount;
+
+        if (!openList.length) {
+            openTrack.innerHTML = '<span class="placeholder">비어 있음</span>';
+        } else {
+            var bestVal = Math.min.apply(null, openList.map(function (id) { return fOf(id); }));
+            openTrack.innerHTML = openList.map(function (id) {
+                var isBest = fOf(id) === bestVal;
+                return '<span class="chip' + (isBest ? ' best' : '') + '">' + label(id) + ' (f=' + fOf(id) + ')</span>';
+            }).join('');
+        }
+
+        if (!closeList.length) {
+            closeTrack.innerHTML = '<span class="placeholder">비어 있음</span>';
+        } else {
+            closeTrack.innerHTML = closeList.map(function (id) {
+                return '<span class="chip">' + label(id) + '</span>';
+            }).join('');
+        }
+    }
+
+    function setBanner(kind, text) {
+        statusBanner.className = 'status-banner' + (kind ? ' show ' + kind : '');
+        statusBanner.textContent = text || '';
+    }
+
+    function onClickOpen(id, el) {
+        if (finished) return;
+        var bestVal = Math.min.apply(null, openList.map(function (nid) { return fOf(nid); }));
+        if (fOf(id) > bestVal) {
+            el.classList.remove('wrong');
+            void el.offsetWidth;
+            el.classList.add('wrong');
+            setBanner('bad', 'OPEN 리스트에 f(n) = g(n)+h(n)이 더 좋은(작은) 노드가 있어요. 평가 함숫값이 가장 작은 노드를 다시 골라보세요.');
+            return;
+        }
+
+        openList.splice(openList.indexOf(id), 1);
+        closeList.push(id);
+        moveCount++;
+
+        var children = childrenMap[id] || [];
+        children.forEach(function (c) {
+            if (openList.indexOf(c) < 0 && closeList.indexOf(c) < 0) openList.push(c);
+        });
+
+        renderLists();
+        render();
+
+        if (id === current.goal) {
+            finished = true;
+            setBanner('ok', '🎉 목표 상태 "' + label(id) + '"에 도달했습니다! 경로 = ' + closeList.map(label).join(' → ') + ' (총 비용 g=' + gMap[id] + ')');
+            fireConfetti();
+            missionHint.textContent = '다시 하기 또는 연습 문제 불러오기를 눌러 새로 시작해 보세요.';
+        } else {
+            setBanner('', '');
+        }
+    }
+
+    function fireConfetti() {
+        if (typeof confetti !== 'function') return;
+        confetti({ particleCount: 90, spread: 70, origin: { x: 0.5, y: 0.4 } });
+    }
+
+    function loadTree(tree) {
+        current = tree;
+        buildMaps();
+        openList = (childrenMap[current.root] || []).slice();
+        closeList = [current.root];
+        moveCount = 0;
+        finished = false;
+        titleText.textContent = tree.name + ' — A* 알고리즘';
+        goalText.textContent = label(tree.goal);
+        missionHint.textContent = 'OPEN 리스트 중 f(n) = g(n)+h(n)이 가장 작은 노드를 클릭하세요.';
+        renderLists();
+        render();
+    }
+
+    function loadDefault() {
+        loadTree(DEFAULT_TREE);
+        setBanner('info', '교과서 기본 예제입니다. g(n)은 부산에서부터 실제 이동한 비용, h(n)은 그 도시에서 서울까지의 예상 비용이에요. f(n)이 가장 작은 노드를 고르세요. (최상 우선 탐색과는 다른 경로가 나와요!)');
+    }
+
+    function retry() {
+        loadTree(current);
+        setBanner('', '');
+    }
+
+    function loadRandomPractice() {
+        var tree = PRACTICE_TREES[Math.floor(Math.random() * PRACTICE_TREES.length)];
+        loadTree(tree);
+        setBanner('info', '새 문제가 출제되었습니다. f(n) = g(n)+h(n)이 가장 작은 노드부터 순서대로 고르세요.');
+    }
+
+    document.getElementById('btn-default').addEventListener('click', loadDefault);
+    document.getElementById('btn-retry').addEventListener('click', retry);
+    document.getElementById('btn-new').addEventListener('click', loadRandomPractice);
+
+    window.addEventListener('resize', function () { render(); });
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () { render(); }).observe(canvasOuter);
+    }
+
+    loadDefault();
+})();
+</script>
+</body>
+</html>
